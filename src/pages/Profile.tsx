@@ -1,10 +1,40 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { User, History, CreditCard, MessageSquare, LogOut } from "lucide-react";
+import { User, History, LogOut } from "lucide-react";
+import { getUser, logout } from "@/lib/auth";
+import { toast } from "sonner";
+
+interface UserData {
+  name: string;
+  phoneNumber: string;
+  countryCode: string;
+}
 
 const Profile = () => {
   const navigate = useNavigate();
+  const [userData, setUserData] = useState<UserData | null>(null);
+
+  useEffect(() => {
+    // Get user data from localStorage
+    const user = getUser();
+    if (!user) {
+      // If no user is logged in, redirect to home page
+      navigate("/");
+      return;
+    }
+    setUserData(user);
+  }, [navigate]);
+
+  const handleLogout = () => {
+    logout();
+    toast.success("You have been signed out");
+    navigate("/");
+  };
+
+  if (!userData) {
+    return null; // Don't render anything while checking auth
+  }
 
   return (
     <div className="page-container bg-eclipse-dark text-white min-h-screen py-16 px-4">
@@ -22,27 +52,23 @@ const Profile = () => {
 
             {/* Profile Info */}
             <div className="flex-1 text-center md:text-left">
-              <h2 className="text-2xl font-semibold">Eclipse Member</h2>
-              <p className="text-gray-400">member@eclipse.com</p>
+              <h2 className="text-2xl font-semibold">{userData.name}</h2>
+              <p className="text-gray-400">
+                {userData.countryCode} {userData.phoneNumber}
+              </p>
               <p className="mt-2 text-sm bg-gradient-to-r from-pink-300 to-amber-200 bg-clip-text text-transparent font-medium">
-                Premium Membership Active
+                Eclipse Player
               </p>
             </div>
-
-            {/* Edit Profile Button */}
-            {/* <Button 
-              variant="outline" 
-              size="sm" 
-              className="border-pink-400/40 text-white hover:bg-pink-500/10"
-            >
-              Edit Profile
-            </Button> */}
           </div>
         </div>
 
-        {/* Profile Sections */}
+        {/* Profile Sections - Only Booking History and Logout */}
         <div className="grid md:grid-cols-2 gap-4">
-          <div className="bg-gray-800/30 rounded-lg p-4 hover:bg-gray-800/50 transition-all">
+          <div
+            className="bg-gray-800/30 rounded-lg p-4 hover:bg-gray-800/50 transition-all cursor-pointer"
+            onClick={() => navigate("/booking-history")} // You would need to create this page
+          >
             <div className="flex items-center gap-3 mb-2">
               <div className="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center">
                 <History size={20} className="text-blue-400" />
@@ -54,31 +80,10 @@ const Profile = () => {
             </p>
           </div>
 
-          <div className="bg-gray-800/30 rounded-lg p-4 hover:bg-gray-800/50 transition-all">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="w-10 h-10 rounded-full bg-amber-500/20 flex items-center justify-center">
-                <CreditCard size={20} className="text-amber-400" />
-              </div>
-              <h3 className="font-semibold">Membership</h3>
-            </div>
-            <p className="text-sm text-gray-400">
-              Manage your membership plan and payments
-            </p>
-          </div>
-
-          <div className="bg-gray-800/30 rounded-lg p-4 hover:bg-gray-800/50 transition-all">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="w-10 h-10 rounded-full bg-green-500/20 flex items-center justify-center">
-                <MessageSquare size={20} className="text-green-400" />
-              </div>
-              <h3 className="font-semibold">Feedback</h3>
-            </div>
-            <p className="text-sm text-gray-400">
-              Share your experience and suggestions
-            </p>
-          </div>
-
-          <div className="bg-gray-800/30 rounded-lg p-4 hover:bg-gray-800/50 transition-all">
+          <div
+            className="bg-gray-800/30 rounded-lg p-4 hover:bg-gray-800/50 transition-all cursor-pointer"
+            onClick={handleLogout}
+          >
             <div className="flex items-center gap-3 mb-2">
               <div className="w-10 h-10 rounded-full bg-red-500/20 flex items-center justify-center">
                 <LogOut size={20} className="text-red-400" />

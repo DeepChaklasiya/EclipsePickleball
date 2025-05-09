@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Dialog,
@@ -8,279 +8,150 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { toast } from "@/hooks/use-toast";
-import { auth } from "@/lib/firebase";
-import {
-  RecaptchaVerifier,
-  signInWithPhoneNumber,
-  ConfirmationResult,
-} from "firebase/auth";
+import { toast } from "sonner";
+import { Label } from "@/components/ui/label";
+import { setUser } from "@/lib/auth";
 
 interface AuthModalProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
-// Define window properties for Typescript
 declare global {
   interface Window {
-    recaptchaVerifier: RecaptchaVerifier | null;
-    confirmationResult: ConfirmationResult | null;
+    phoneEmailListener?: (data: { user_json_url: string }) => void;
   }
 }
 
 const AuthModal = ({ isOpen, onClose }: AuthModalProps) => {
   const navigate = useNavigate();
-  const [phoneNumber, setPhoneNumber] = useState("");
-  const [otp, setOtp] = useState("");
-  const [isVerifying, setIsVerifying] = useState(false);
+  const [name, setName] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showPhoneEmailButton, setShowPhoneEmailButton] = useState(false);
+  const signInButtonRef = useRef<HTMLDivElement>(null);
 
-  // Setup invisible reCAPTCHA when modal opens
   useEffect(() => {
-    if (isOpen && !window.recaptchaVerifier) {
-      setupRecaptcha();
-    }
+    // Setup Phone.Email callback function
+    window.phoneEmailListener = (data) => {
+      if (data && data.user_json_url) {
+        // Fetch user data from JSON URL
+        fetch(data.user_json_url)
+          .then((response) => response.json())
+          .then((userData) => {
+            toast.success("Phone verification successful!");
 
-    // Cleanup when modal closes
-    return () => {
-      if (!isOpen && window.recaptchaVerifier) {
-        window.recaptchaVerifier.clear();
-        window.recaptchaVerifier = null;
+            // Store user data using our auth utility
+            setUser({
+              phoneNumber: userData.user_phone_number,
+              countryCode: userData.user_country_code,
+              name: name || userData.user_first_name || "User",
+            });
+
+            // Close modal and navigate
+            setLoading(false);
+            onClose();
+            navigate("/location-select");
+          })
+          .catch((error) => {
+            console.error("Error fetching user data:", error);
+            toast.error("Verification failed. Please try again.");
+            setLoading(false);
+          });
       }
     };
-  }, [isOpen]);
 
-  // Setup invisible reCAPTCHA
-  const setupRecaptcha = () => {
-    try {
-      // Clear any existing recaptcha
-      if (window.recaptchaVerifier) {
-        window.recaptchaVerifier.clear();
+    // Load Phone.Email script when button becomes visible
+    if (isOpen && showPhoneEmailButton && signInButtonRef.current) {
+      const script = document.createElement("script");
+      script.src = "https://www.phone.email/sign_in_button_v1.js";
+      script.async = true;
+
+      if (!document.getElementById("phoneemail-script")) {
+        script.id = "phoneemail-script";
+        signInButtonRef.current.appendChild(script);
       }
-
-      window.recaptchaVerifier = new RecaptchaVerifier(auth, "send-otp-btn", {
-        size: "invisible",
-        isV3: true,
-        forceInvisible: true,
-        callback: () => {
-          console.log("reCAPTCHA solved automatically");
-        },
-        "expired-callback": () => {
-          toast({
-            title: "reCAPTCHA expired",
-            description: "Please try again",
-            variant: "destructive",
-          });
-        },
-      });
-    } catch (error: any) {
-      console.error("Error setting up reCAPTCHA:", error);
-      toast({
-        title: "Error",
-        description: error.message || "Failed to setup verification",
-        variant: "destructive",
-      });
     }
-  };
 
-  const handlePhoneSubmit = async (e: React.FormEvent) => {
+    return () => {
+      // Cleanup script when modal closes
+      if (!isOpen) {
+        const script = document.getElementById("phoneemail-script");
+        if (script) {
+          script.remove();
+        }
+      }
+    };
+  }, [isOpen, navigate, onClose, name, showPhoneEmailButton]);
+
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!phoneNumber || phoneNumber.length < 10) {
-      toast({
-        title: "Invalid phone number",
-        description: "Please enter a valid phone number",
-        variant: "destructive",
-      });
+    if (!name.trim()) {
+      toast.error("Please enter your name");
       return;
     }
 
     setLoading(true);
-
-    try {
-      // Make sure we have a recaptcha verifier
-      if (!window.recaptchaVerifier) {
-        setupRecaptcha();
-      }
-
-      const formattedPhone = phoneNumber.startsWith("+")
-        ? phoneNumber
-        : `+${phoneNumber}`;
-      const appVerifier = window.recaptchaVerifier!;
-
-      // Send verification code
-      const confirmationResult = await signInWithPhoneNumber(
-        auth,
-        formattedPhone,
-        appVerifier
-      );
-
-      // Store confirmation result
-      window.confirmationResult = confirmationResult;
-
-      // Update UI
-      setIsVerifying(true);
-
-      toast({
-        title: "OTP Sent",
-        description: "A verification code has been sent to your phone",
-      });
-    } catch (error: any) {
-      console.error("Error sending verification code:", error);
-
-      toast({
-        title: "Error",
-        description: error.message || "Failed to send verification code",
-        variant: "destructive",
-      });
-
-      // Reset reCAPTCHA on error
-      if (window.recaptchaVerifier) {
-        window.recaptchaVerifier.clear();
-        window.recaptchaVerifier = null;
-        setupRecaptcha();
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleOtpSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!otp || otp.length < 4) {
-      toast({
-        title: "Invalid OTP",
-        description: "Please enter a valid verification code",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setLoading(true);
-
-    try {
-      if (!window.confirmationResult) {
-        throw new Error("No verification was sent. Please request a new code.");
-      }
-
-      // Verify the code
-      const result = await window.confirmationResult.confirm(otp);
-
-      // User is now signed in
-      console.log("User signed in:", result.user);
-
-      toast({
-        title: "Login Successful",
-        description: "Welcome to Eclipse Pickleball",
-      });
-
-      // Reset state and close modal
-      window.confirmationResult = null;
-      if (window.recaptchaVerifier) {
-        window.recaptchaVerifier.clear();
-        window.recaptchaVerifier = null;
-      }
-
-      onClose();
-      navigate("/location-select");
-    } catch (error: any) {
-      console.error("Error verifying code:", error);
-
-      toast({
-        title: "Error",
-        description: error.message || "Failed to verify code",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleChangeNumber = () => {
-    setIsVerifying(false);
-    if (window.recaptchaVerifier) {
-      window.recaptchaVerifier.clear();
-      window.recaptchaVerifier = null;
-      setupRecaptcha();
-    }
+    // Show the Phone.Email button which will load the script
+    setShowPhoneEmailButton(true);
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md glass-card">
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle className="text-center text-2xl eclipse-gradient">
-            {isVerifying ? "Verify Phone" : "Sign In / Sign Up"}
+          <DialogTitle className="text-center text-2xl bg-gradient-to-r from-pink-400 to-amber-300 bg-clip-text text-transparent">
+            Sign In
           </DialogTitle>
         </DialogHeader>
 
-        {!isVerifying ? (
-          <form onSubmit={handlePhoneSubmit} className="space-y-4">
+        {!showPhoneEmailButton ? (
+          <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <label className="text-sm text-muted-foreground">
-                Phone Number
-              </label>
+              <Label htmlFor="name">Full Name</Label>
               <Input
-                placeholder="Enter your phone number (e.g. +11234567890)"
-                type="tel"
-                value={phoneNumber}
-                onChange={(e) => setPhoneNumber(e.target.value)}
-                className="bg-secondary/30"
+                id="name"
+                placeholder="Enter your name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
                 disabled={loading}
+                required
               />
             </div>
-            <p className="text-xs text-muted-foreground text-center">
-              Include country code (e.g. +1 for US)
-            </p>
+
             <Button
-              id="send-otp-btn"
               type="submit"
-              className="w-full booking-button bg-eclipse-gradient"
+              className="w-full bg-gradient-to-r from-pink-500 to-amber-400 hover:from-pink-600 hover:to-amber-500"
               disabled={loading}
             >
-              {loading ? "Sending..." : "Send OTP"}
+              {loading ? "Processing..." : "Get OTP"}
             </Button>
           </form>
         ) : (
-          <form onSubmit={handleOtpSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <label className="text-sm text-muted-foreground">
-                Verification Code
-              </label>
-              <Input
-                placeholder="Enter OTP"
-                type="text"
-                value={otp}
-                onChange={(e) => setOtp(e.target.value)}
-                className="bg-secondary/30"
-                maxLength={6}
-                disabled={loading}
-              />
+          <div className="space-y-4">
+            <div className="text-center text-sm text-muted-foreground mb-4">
+              <p>Verify your phone number with OTP</p>
             </div>
-            <p className="text-xs text-muted-foreground text-center">
-              We sent a code to {phoneNumber}
-            </p>
-            <div className="flex flex-col gap-2">
-              <Button
-                type="submit"
-                className="w-full booking-button bg-eclipse-gradient"
-                disabled={loading}
-              >
-                {loading ? "Verifying..." : "Verify"}
-              </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={handleChangeNumber}
-                className="text-sm text-muted-foreground hover:text-foreground"
-                disabled={loading}
-              >
-                Change Phone Number
-              </Button>
-            </div>
-          </form>
+
+            {/* Phone.Email button container */}
+            <div
+              ref={signInButtonRef}
+              className="pe_signin_button flex justify-center"
+              data-client-id="11342325218017613728"
+            ></div>
+
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setShowPhoneEmailButton(false);
+                setLoading(false);
+              }}
+              className="w-full mt-4"
+            >
+              Back
+            </Button>
+          </div>
         )}
       </DialogContent>
     </Dialog>

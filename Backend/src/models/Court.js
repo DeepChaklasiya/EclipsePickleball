@@ -21,11 +21,6 @@ const courtSchema = new mongoose.Schema(
       enum: ["indoor", "outdoor"],
       default: "outdoor",
     },
-    surface: {
-      type: String,
-      enum: ["hard", "clay", "grass", "artificial"],
-      default: "hard",
-    },
     status: {
       type: String,
       enum: ["available", "maintenance", "closed"],
@@ -34,8 +29,8 @@ const courtSchema = new mongoose.Schema(
     pricePerHour: {
       type: Number,
       required: [true, "Price per hour is required"],
+      default: 800,
     },
-    features: [String],
     active: {
       type: Boolean,
       default: true,

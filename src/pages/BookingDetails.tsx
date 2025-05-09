@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { useForm } from "react-hook-form";
@@ -17,15 +17,29 @@ import {
 } from "@/components/ui/form";
 import Header from "@/components/Header";
 import BookingSteps from "@/components/BookingSteps";
-import { useBooking, BookingDetails as BookingDetailsType } from "@/context/BookingContext";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, MapPin, Calendar, Clock, Users } from "lucide-react";
+import {
+  useBooking,
+  BookingDetails as BookingDetailsType,
+} from "@/context/BookingContext";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { ArrowLeft, MapPin, Calendar, Clock } from "lucide-react";
+import { getUser } from "@/lib/auth";
+import { createBooking } from "@/lib/api";
+import { toast } from "sonner";
 
 const formSchema = z.object({
   name: z.string().min(2, { message: "Name must be at least 2 characters" }),
   email: z.string().email({ message: "Invalid email address" }),
-  phoneNumber: z.string().min(10, { message: "Phone number must be at least 10 characters" }),
-  players: z.string().min(1, { message: "Number of players is required" }),
+  phoneNumber: z
+    .string()
+    .min(10, { message: "Phone number must be at least 10 characters" }),
+  players: z.number().min(1).max(6).default(4),
   notes: z.string().optional(),
 });
 
@@ -33,30 +47,89 @@ const BookingDetailsPage = () => {
   const navigate = useNavigate();
   const { booking, setBookingDetails } = useBooking();
   const [couponCode, setCouponCode] = useState("");
+  const [userName, setUserName] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Get user from local storage
+  useEffect(() => {
+    const user = getUser();
+    if (user) {
+      setUserName(user.name || "");
+    }
+  }, []);
 
   // Initialize form with existing booking details if available
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      name: booking?.details?.name || "",
+      name: userName || booking?.details?.name || "",
       email: booking?.details?.email || "",
       phoneNumber: booking?.details?.phoneNumber || "",
-      players: booking?.details?.players?.toString() || "",
+      players: booking?.details?.players || 4,
       notes: booking?.details?.notes || "",
     },
   });
 
-  const onSubmit = (data: z.infer<typeof formSchema>) => {
-    const details: BookingDetailsType = {
-      name: data.name,
-      email: data.email,
-      phoneNumber: data.phoneNumber,
-      players: parseInt(data.players),
-      notes: data.notes,
-    };
+  // Update form when userName changes from localStorage
+  useEffect(() => {
+    if (userName) {
+      form.setValue("name", userName);
+    }
+  }, [userName, form]);
 
-    setBookingDetails(details);
-    navigate("/booking-confirmation");
+  const onSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+
+    if (!isSubmitting) {
+      try {
+        setIsSubmitting(true);
+
+        // Prepare time slot ID based on the booking time slot
+        let timeSlotId = "";
+        if (booking.timeSlot) {
+          if (booking.timeSlot.id) {
+            timeSlotId = booking.timeSlot.id;
+          } else {
+            timeSlotId = `${booking.timeSlot.startTime}-${booking.timeSlot.endTime}`;
+          }
+        }
+
+        // Court ID from the selected court
+        const courtId = booking.court?.id || "";
+
+        // Format the date properly
+        const formattedDate = booking.date ? booking.date : new Date();
+
+        const createdBooking = await createBooking(
+          form.getValues().phoneNumber,
+          form.getValues().name,
+          courtId,
+          formattedDate,
+          timeSlotId,
+          form.getValues().players || 4,
+          form.getValues().notes
+        );
+
+        // Update booking with details
+        setBookingDetails({
+          name: form.getValues().name,
+          email: form.getValues().email,
+          phoneNumber: form.getValues().phoneNumber,
+          players: form.getValues().players || 4,
+          notes: form.getValues().notes,
+        });
+
+        toast.success("Booking successful!");
+        navigate("/booking-confirmation");
+      } catch (error) {
+        console.error("Booking error:", error);
+        toast.error(
+          error.message || "Failed to create booking. Please try again."
+        );
+      } finally {
+        setIsSubmitting(false);
+      }
+    }
   };
 
   const handleBack = () => {
@@ -64,15 +137,15 @@ const BookingDetailsPage = () => {
   };
 
   const handlePayAtCourt = () => {
-    // Use the form data for the name and players
+    // Use the form data for the name
     const formData = form.getValues();
-    
+
     const details: BookingDetailsType = {
-      name: formData.name || "Guest",
+      name: formData.name || userName || "Guest",
       email: formData.email || "",
       phoneNumber: formData.phoneNumber || "",
-      players: parseInt(formData.players || "2"),
       notes: formData.notes || "",
+      players: 4,
     };
 
     setBookingDetails(details);
@@ -82,7 +155,7 @@ const BookingDetailsPage = () => {
   // Format court display name
   const getCourtDisplayName = () => {
     if (!booking.court) return "";
-    return `OUTDOOR | ${booking.court.id}`;
+    return `OUTDOOR | ${8 - Number(booking.court.id)}`;
   };
 
   return (
@@ -97,7 +170,7 @@ const BookingDetailsPage = () => {
 
         <div className="bg-white rounded-2xl p-6 shadow-sm mb-8">
           <div className="flex items-center mb-6">
-            <button 
+            <button
               onClick={handleBack}
               className="w-10 h-10 rounded-full border border-gray-300 flex items-center justify-center mr-4"
             >
@@ -129,7 +202,9 @@ const BookingDetailsPage = () => {
                 <span className="text-gray-600">DATE</span>
               </div>
               <div className="font-medium text-right">
-                {booking.date ? format(booking.date, "EEE, dd MMM").toUpperCase() : "---"}
+                {booking.date
+                  ? format(booking.date, "EEE, dd MMM").toUpperCase()
+                  : "---"}
               </div>
             </div>
 
@@ -145,7 +220,16 @@ const BookingDetailsPage = () => {
 
             <div className="flex justify-between items-center py-2">
               <div className="flex items-center">
-                <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 mr-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="w-5 h-5 mr-2"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
                   <circle cx="12" cy="12" r="10"></circle>
                   <path d="M8 14s1.5 2 4 2 4-2 4-2"></path>
                   <line x1="9" y1="9" x2="9.01" y2="9"></line>
@@ -160,63 +244,22 @@ const BookingDetailsPage = () => {
 
             <div className="flex justify-between items-center py-2">
               <div className="flex items-center">
-                <Users className="w-5 h-5 mr-2" />
-                <span className="text-gray-600">NO. OF PLAYERS</span>
-              </div>
-              <div className="font-medium text-right">
-                <Form {...form}>
-                  <FormField
-                    control={form.control}
-                    name="players"
-                    render={({ field }) => (
-                      <Select 
-                        onValueChange={field.onChange} 
-                        defaultValue={field.value}
-                      >
-                        <FormControl>
-                          <SelectTrigger className="w-20 h-8 bg-transparent border-none focus:ring-0 text-right pr-0">
-                            <SelectValue placeholder="?" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="2">2</SelectItem>
-                          <SelectItem value="3">3</SelectItem>
-                          <SelectItem value="4">4</SelectItem>
-                          <SelectItem value="5">5</SelectItem>
-                          <SelectItem value="6">6</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    )}
-                  />
-                </Form>
-              </div>
-            </div>
-
-            <div className="flex justify-between items-center py-2">
-              <div className="flex items-center">
-                <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 mr-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="w-5 h-5 mr-2"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
                   <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
                   <circle cx="12" cy="7" r="4"></circle>
                 </svg>
                 <span className="text-gray-600">BOOKING BY</span>
               </div>
-              <div className="font-medium text-right">
-                <Form {...form}>
-                  <FormField
-                    control={form.control}
-                    name="name"
-                    render={({ field }) => (
-                      <FormControl>
-                        <Input 
-                          placeholder="Your name" 
-                          {...field} 
-                          className="w-40 h-8 bg-transparent border-none focus:ring-0 text-right pr-0 placeholder:text-gray-400"
-                        />
-                      </FormControl>
-                    )}
-                  />
-                </Form>
-              </div>
+              <div className="font-medium text-right">{userName || "---"}</div>
             </div>
           </div>
 
@@ -237,11 +280,25 @@ const BookingDetailsPage = () => {
             <span>Total amount</span>
             <span>₹800</span>
           </div>
-          
+
           {/* Hidden form fields */}
           <div className="hidden">
             <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+              <form onSubmit={onSubmit} className="space-y-6">
+                <FormField
+                  control={form.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Name</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Your name" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
                 <FormField
                   control={form.control}
                   name="email"
@@ -249,13 +306,17 @@ const BookingDetailsPage = () => {
                     <FormItem>
                       <FormLabel>Email</FormLabel>
                       <FormControl>
-                        <Input placeholder="Your email" type="email" {...field} />
+                        <Input
+                          placeholder="Your email"
+                          type="email"
+                          {...field}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
-                
+
                 <FormField
                   control={form.control}
                   name="phoneNumber"
@@ -263,13 +324,48 @@ const BookingDetailsPage = () => {
                     <FormItem>
                       <FormLabel>Phone Number</FormLabel>
                       <FormControl>
-                        <Input placeholder="Your phone number" type="tel" {...field} />
+                        <Input
+                          placeholder="Your phone number"
+                          type="tel"
+                          {...field}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
-                
+
+                <FormField
+                  control={form.control}
+                  name="players"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Number of Players</FormLabel>
+                      <FormControl>
+                        <Select
+                          onValueChange={(value) =>
+                            field.onChange(parseInt(value))
+                          }
+                          defaultValue={field.value?.toString() || "4"}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select number of players" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="1">1 Player</SelectItem>
+                            <SelectItem value="2">2 Players</SelectItem>
+                            <SelectItem value="3">3 Players</SelectItem>
+                            <SelectItem value="4">4 Players</SelectItem>
+                            <SelectItem value="5">5 Players</SelectItem>
+                            <SelectItem value="6">6 Players</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
                 <FormField
                   control={form.control}
                   name="notes"
@@ -277,9 +373,9 @@ const BookingDetailsPage = () => {
                     <FormItem>
                       <FormLabel>Additional Notes (Optional)</FormLabel>
                       <FormControl>
-                        <Textarea 
-                          placeholder="Any special requests or information" 
-                          {...field} 
+                        <Textarea
+                          placeholder="Any special requests or information"
+                          {...field}
                         />
                       </FormControl>
                       <FormMessage />
@@ -293,7 +389,7 @@ const BookingDetailsPage = () => {
       </div>
 
       <div className="sticky-button-container flex items-center justify-center">
-        <Button 
+        <Button
           onClick={handlePayAtCourt}
           variant="cosmic"
           size="cosmic"

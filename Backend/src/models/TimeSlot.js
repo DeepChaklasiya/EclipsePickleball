@@ -17,18 +17,6 @@ const timeSlotSchema = new mongoose.Schema(
       enum: ["morning", "afternoon", "evening"],
       required: [true, "Section is required"],
     },
-    isAvailable: {
-      type: Boolean,
-      default: true,
-    },
-    daysAvailable: {
-      type: [Number], // 0 = Sunday, 1 = Monday, etc.
-      default: [0, 1, 2, 3, 4, 5, 6], // Default available all days
-    },
-    capacity: {
-      type: Number,
-      default: 4,
-    },
     active: {
       type: Boolean,
       default: true,
@@ -40,12 +28,6 @@ const timeSlotSchema = new mongoose.Schema(
     toObject: { virtuals: true },
   }
 );
-
-// Method to check if time slot is available for a specific date
-timeSlotSchema.methods.isAvailableForDate = function (date) {
-  const dayOfWeek = date.getDay();
-  return this.daysAvailable.includes(dayOfWeek) && this.isAvailable;
-};
 
 const TimeSlot = mongoose.model("TimeSlot", timeSlotSchema);
 

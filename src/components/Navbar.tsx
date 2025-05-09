@@ -1,8 +1,17 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { User } from "lucide-react";
+import { User, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { isAuthenticated, logout, getUser } from "@/lib/auth";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { toast } from "sonner";
 
 // Define paddle animation keyframes
 const paddleAnimations = `
@@ -52,6 +61,15 @@ interface NavbarProps {
 const Navbar = ({ variant = "default" }: NavbarProps) => {
   const location = useLocation();
   const navigate = useNavigate();
+  const [userName, setUserName] = useState<string>("");
+
+  useEffect(() => {
+    // Get user name for display
+    const user = getUser();
+    if (user) {
+      setUserName(user.name);
+    }
+  }, [location.pathname]); // Refresh when path changes
 
   // Add animation styles when component mounts
   useEffect(() => {
@@ -67,9 +85,20 @@ const Navbar = ({ variant = "default" }: NavbarProps) => {
   }, []);
 
   const isCosmicVariant = variant === "cosmic" || location.pathname === "/";
+  const authenticated = isAuthenticated();
 
   const handleProfileClick = () => {
-    navigate("/profile");
+    if (authenticated) {
+      navigate("/profile");
+    } else {
+      navigate("/");
+    }
+  };
+
+  const handleSignOut = () => {
+    logout();
+    toast.success("You have been signed out");
+    navigate("/");
   };
 
   return (
@@ -119,17 +148,45 @@ const Navbar = ({ variant = "default" }: NavbarProps) => {
           </Link>
         </div>
 
-        {/* Profile Button */}
+        {/* User menu */}
         <div>
-          <Button
-            variant={isCosmicVariant ? "cosmic" : "default"}
-            size="sm"
-            className="flex items-center gap-2"
-            onClick={handleProfileClick}
-          >
-            <User size={16} />
-            <span className="hidden md:inline">Profile</span>
-          </Button>
+          {authenticated ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant={isCosmicVariant ? "cosmic" : "default"}
+                  size="sm"
+                  className="flex items-center gap-2"
+                >
+                  <User size={16} />
+                  <span className="hidden md:inline">
+                    {userName || "Profile"}
+                  </span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={handleProfileClick}>
+                  <User className="mr-2 h-4 w-4" />
+                  <span>Profile</span>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleSignOut}>
+                  <LogOut className="mr-2 h-4 w-4" />
+                  <span>Sign out</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            <Button
+              variant={isCosmicVariant ? "cosmic" : "default"}
+              size="sm"
+              className="flex items-center gap-2"
+              onClick={() => navigate("/")}
+            >
+              <User size={16} />
+              <span className="hidden md:inline">Sign In</span>
+            </Button>
+          )}
         </div>
       </nav>
     </header>

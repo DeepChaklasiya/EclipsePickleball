@@ -24,13 +24,13 @@ const bookingSchema = new mongoose.Schema(
     status: {
       type: String,
       enum: ["pending", "confirmed", "cancelled"],
-      default: "pending",
+      default: "confirmed",
     },
     numberOfPlayers: {
       type: Number,
       required: [true, "Number of players is required"],
       min: 1,
-      max: 4,
+      max: 6,
     },
     totalPrice: {
       type: Number,
@@ -38,8 +38,8 @@ const bookingSchema = new mongoose.Schema(
     },
     paymentStatus: {
       type: String,
-      enum: ["pending", "completed", "pay-at-court"],
-      default: "pending",
+      enum: ["pay-at-court"],
+      default: "pay-at-court",
     },
     notes: {
       type: String,
@@ -68,9 +68,8 @@ bookingSchema.pre("save", async function (next) {
 });
 
 // Indexes for faster queries
-bookingSchema.index({ date: 1, timeSlot: 1, court: 1 }, { unique: true });
 bookingSchema.index({ user: 1, date: 1 });
-bookingSchema.index({ status: 1 });
+bookingSchema.index({ court: 1, date: 1, timeSlot: 1 });
 
 const Booking = mongoose.model("Booking", bookingSchema);
 

@@ -1,26 +1,17 @@
 const express = require("express");
-const bookingController = require("../controllers/bookingController");
-const { protect, restrictTo } = require("../middleware/authMiddleware");
-const { validateBookingData } = require("../middleware/validationMiddleware");
-
 const router = express.Router();
+const bookingController = require("../controllers/booking.controller");
 
-// All booking routes are protected
-router.use(protect);
+// Get availability (booked courts) for date/time
+router.get("/availability", bookingController.getBookedCourts);
 
-// Regular user routes
-router.get("/user", bookingController.getUserBookings);
-router.post("/", validateBookingData, bookingController.createBooking);
+// Create a new booking
+router.post("/", bookingController.createBooking);
 
-// Routes for specific bookings
-router
-  .route("/:id")
-  .get(bookingController.getBooking)
-  .patch(bookingController.updateBooking)
-  .delete(bookingController.cancelBooking);
+// Get all bookings for a user by phone number
+router.get("/user/:phoneNumber", bookingController.getUserBookings);
 
-// Admin only routes
-router.use(restrictTo("admin"));
-router.get("/", bookingController.getAllBookings);
+// Get booking by ID
+router.get("/:id", bookingController.getBooking);
 
 module.exports = router;

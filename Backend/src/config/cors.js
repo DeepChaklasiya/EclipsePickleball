@@ -5,6 +5,7 @@ const corsOptions = {
     const allowedOrigins = [
       "http://localhost:3000",
       "http://localhost:5173",
+      "http://localhost:8080",
       "https://eclipsepickleball.com",
     ];
     const isAllowed = !origin || allowedOrigins.indexOf(origin) !== -1;

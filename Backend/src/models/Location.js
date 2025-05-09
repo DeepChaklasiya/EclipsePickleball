@@ -12,19 +12,6 @@ const locationSchema = new mongoose.Schema(
       required: [true, "Location address is required"],
       trim: true,
     },
-    image: {
-      type: String,
-      default: "/images/default-location.jpg",
-    },
-    description: {
-      type: String,
-      trim: true,
-    },
-    status: {
-      type: String,
-      enum: ["active", "coming-soon", "closed"],
-      default: "active",
-    },
     coordinates: {
       lat: {
         type: Number,
@@ -33,7 +20,11 @@ const locationSchema = new mongoose.Schema(
         type: Number,
       },
     },
-    amenities: [String],
+    status: {
+      type: String,
+      enum: ["active", "coming-soon", "closed"],
+      default: "active",
+    },
     active: {
       type: Boolean,
       default: true,

@@ -17,13 +17,15 @@ interface TimeSlot {
 const DateTimeSelect = () => {
   const navigate = useNavigate();
   const { setBookingDate, setBookingTimeSlot } = useBooking();
-  
+
   // Generate dates for the next 10 days
   const today = new Date();
   const dates = Array.from({ length: 10 }, (_, i) => addDays(today, i));
-  
+
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(dates[0]);
-  const [selectedTimeSlot, setSelectedTimeSlot] = useState<TimeSlot | undefined>();
+  const [selectedTimeSlot, setSelectedTimeSlot] = useState<
+    TimeSlot | undefined
+  >();
 
   // Time slots organized by section
   const timeSlots: TimeSlot[] = [
@@ -34,7 +36,7 @@ const DateTimeSelect = () => {
     { id: "m4", time: "9:00 AM", section: "morning" },
     { id: "m5", time: "10:00 AM", section: "morning" },
     { id: "m6", time: "11:00 AM", section: "morning" },
-    
+
     // Afternoon slots
     { id: "a1", time: "12:00 PM", section: "afternoon" },
     { id: "a2", time: "1:00 PM", section: "afternoon" },
@@ -42,7 +44,7 @@ const DateTimeSelect = () => {
     { id: "a4", time: "3:00 PM", section: "afternoon" },
     { id: "a5", time: "4:00 PM", section: "afternoon" },
     { id: "a6", time: "5:00 PM", section: "afternoon" },
-    
+
     // Evening slots
     { id: "e1", time: "6:00 PM", section: "evening" },
     { id: "e2", time: "7:00 PM", section: "evening" },
@@ -82,7 +84,7 @@ const DateTimeSelect = () => {
     const formattedTimeSlot = {
       id: selectedTimeSlot.id,
       startTime: selectedTimeSlot.time,
-      endTime: "" // In a real app, this would be calculated
+      endTime: "", // In a real app, this would be calculated
     };
 
     setBookingDate(selectedDate);
@@ -91,9 +93,12 @@ const DateTimeSelect = () => {
   };
 
   // Get time slots filtered by section
-  const getMorningSlotsFiltered = () => timeSlots.filter(slot => slot.section === "morning");
-  const getAfternoonSlotsFiltered = () => timeSlots.filter(slot => slot.section === "afternoon");
-  const getEveningSlotsFiltered = () => timeSlots.filter(slot => slot.section === "evening");
+  const getMorningSlotsFiltered = () =>
+    timeSlots.filter((slot) => slot.section === "morning");
+  const getAfternoonSlotsFiltered = () =>
+    timeSlots.filter((slot) => slot.section === "afternoon");
+  const getEveningSlotsFiltered = () =>
+    timeSlots.filter((slot) => slot.section === "evening");
 
   return (
     <div className="page-container bg-black text-white min-h-screen">
@@ -117,24 +122,34 @@ const DateTimeSelect = () => {
         <div className="mb-12 overflow-x-auto">
           <div className="flex space-x-2 min-w-max pb-2">
             {dates.map((date, index) => {
-              const isSelected = selectedDate && 
-                format(selectedDate, 'yyyy-MM-dd') === format(date, 'yyyy-MM-dd');
-              
+              const isSelected =
+                selectedDate &&
+                format(selectedDate, "yyyy-MM-dd") ===
+                  format(date, "yyyy-MM-dd");
+
               return (
-                <div 
+                <div
                   key={index}
                   onClick={() => handleDateSelect(date)}
                   className={`cursor-pointer rounded-lg p-3 min-w-[4.5rem] text-center transition-all duration-300 transform hover:scale-105 ${
-                    isSelected 
-                      ? 'bg-[#3A2922] shadow-[0_0_15px_rgba(255,165,0,0.5)]' 
-                      : 'bg-white hover:shadow-[0_0_10px_rgba(0,200,255,0.3)]'
+                    isSelected
+                      ? "bg-[#3A2922] shadow-[0_0_15px_rgba(255,165,0,0.5)]"
+                      : "bg-white hover:shadow-[0_0_10px_rgba(0,200,255,0.3)]"
                   }`}
                 >
-                  <div className={`text-[10px] uppercase font-light tracking-wider ${isSelected ? 'text-white' : 'text-black'}`}>
-                    {format(date, 'EEE')}
+                  <div
+                    className={`text-[10px] uppercase font-light tracking-wider ${
+                      isSelected ? "text-white" : "text-black"
+                    }`}
+                  >
+                    {format(date, "EEE")}
                   </div>
-                  <div className={`text-2xl font-light ${isSelected ? 'text-white' : 'text-black'}`}>
-                    {format(date, 'dd')}
+                  <div
+                    className={`text-2xl font-light ${
+                      isSelected ? "text-white" : "text-black"
+                    }`}
+                  >
+                    {format(date, "dd")}
                   </div>
                 </div>
               );
@@ -149,22 +164,29 @@ const DateTimeSelect = () => {
             <div className="flex justify-between items-center mb-4">
               <div className="flex items-center">
                 <span className="mr-2">☀️</span>
-                <span className="font-light text-black tracking-wider text-lg">MORNING</span>
+                <span className="font-light text-black tracking-wider text-lg">
+                  MORNING
+                </span>
               </div>
-              <div className="font-light text-black tracking-wider">₹0</div>
+              <div className="font-light text-black tracking-wider">₹500</div>
             </div>
             <div className="grid grid-cols-3 gap-3">
-              {getMorningSlotsFiltered().map(slot => (
+              {getMorningSlotsFiltered().map((slot) => (
                 <button
                   key={slot.id}
                   onClick={() => handleTimeSlotSelect(slot)}
                   className={`py-3 px-3 rounded-md border transition-all duration-300 transform 
-                    ${selectedTimeSlot?.id === slot.id 
-                      ? 'bg-gradient-to-r from-pink-400 to-amber-300 text-black font-light border-transparent shadow-[0_0_15px_rgba(255,165,0,0.5)] scale-105' 
-                      : 'bg-white text-black border-green-300 font-light hover:border-blue-400 hover:shadow-[0_0_10px_rgba(0,200,255,0.3)] hover:scale-105'
+                    ${
+                      selectedTimeSlot?.id === slot.id
+                        ? "bg-gradient-to-r from-pink-400 to-amber-300 text-black font-light border-transparent shadow-[0_0_15px_rgba(255,165,0,0.5)] scale-105"
+                        : "bg-white text-black border-green-300 font-light hover:border-blue-400 hover:shadow-[0_0_10px_rgba(0,200,255,0.3)] hover:scale-105"
                     }`}
                 >
-                  <span className={`transition-all duration-300 ${selectedTimeSlot?.id === slot.id ? 'text-black' : ''}`}>
+                  <span
+                    className={`transition-all duration-300 ${
+                      selectedTimeSlot?.id === slot.id ? "text-black" : ""
+                    }`}
+                  >
                     {slot.time}
                   </span>
                 </button>
@@ -177,22 +199,31 @@ const DateTimeSelect = () => {
             <div className="flex justify-between items-center mb-4">
               <div className="flex items-center">
                 <span className="mr-2">🌞</span>
-                <span className="font-light text-black tracking-wider text-lg">AFTERNOON</span>
+                <span className="font-light text-black tracking-wider text-lg">
+                  AFTERNOON
+                </span>
               </div>
-              <div className="font-light text-black tracking-wider">₹800.00</div>
+              <div className="font-light text-black tracking-wider">
+                ₹800.00
+              </div>
             </div>
             <div className="grid grid-cols-3 gap-3">
-              {getAfternoonSlotsFiltered().map(slot => (
+              {getAfternoonSlotsFiltered().map((slot) => (
                 <button
                   key={slot.id}
                   onClick={() => handleTimeSlotSelect(slot)}
                   className={`py-3 px-3 rounded-md border transition-all duration-300 transform 
-                    ${selectedTimeSlot?.id === slot.id 
-                      ? 'bg-gradient-to-r from-pink-400 to-amber-300 text-black font-light border-transparent shadow-[0_0_15px_rgba(255,165,0,0.5)] scale-105' 
-                      : 'bg-white text-black border-yellow-300 font-light hover:border-blue-400 hover:shadow-[0_0_10px_rgba(0,200,255,0.3)] hover:scale-105'
+                    ${
+                      selectedTimeSlot?.id === slot.id
+                        ? "bg-gradient-to-r from-pink-400 to-amber-300 text-black font-light border-transparent shadow-[0_0_15px_rgba(255,165,0,0.5)] scale-105"
+                        : "bg-white text-black border-yellow-300 font-light hover:border-blue-400 hover:shadow-[0_0_10px_rgba(0,200,255,0.3)] hover:scale-105"
                     }`}
                 >
-                  <span className={`transition-all duration-300 ${selectedTimeSlot?.id === slot.id ? 'text-black' : ''}`}>
+                  <span
+                    className={`transition-all duration-300 ${
+                      selectedTimeSlot?.id === slot.id ? "text-black" : ""
+                    }`}
+                  >
                     {slot.time}
                   </span>
                 </button>
@@ -205,22 +236,31 @@ const DateTimeSelect = () => {
             <div className="flex justify-between items-center mb-4">
               <div className="flex items-center">
                 <span className="mr-2">🌙</span>
-                <span className="font-light text-black tracking-wider text-lg">EVENING</span>
+                <span className="font-light text-black tracking-wider text-lg">
+                  EVENING
+                </span>
               </div>
-              <div className="font-light text-black tracking-wider">₹800.00</div>
+              <div className="font-light text-black tracking-wider">
+                ₹800.00
+              </div>
             </div>
             <div className="grid grid-cols-3 gap-3">
-              {getEveningSlotsFiltered().map(slot => (
+              {getEveningSlotsFiltered().map((slot) => (
                 <button
                   key={slot.id}
                   onClick={() => handleTimeSlotSelect(slot)}
                   className={`py-3 px-3 rounded-md border transition-all duration-300 transform 
-                    ${selectedTimeSlot?.id === slot.id 
-                      ? 'bg-gradient-to-r from-pink-400 to-amber-300 text-black font-light border-transparent shadow-[0_0_15px_rgba(255,165,0,0.5)] scale-105' 
-                      : 'bg-white text-black border-red-300 font-light hover:border-blue-400 hover:shadow-[0_0_10px_rgba(0,200,255,0.3)] hover:scale-105'
+                    ${
+                      selectedTimeSlot?.id === slot.id
+                        ? "bg-gradient-to-r from-pink-400 to-amber-300 text-black font-light border-transparent shadow-[0_0_15px_rgba(255,165,0,0.5)] scale-105"
+                        : "bg-white text-black border-red-300 font-light hover:border-blue-400 hover:shadow-[0_0_10px_rgba(0,200,255,0.3)] hover:scale-105"
                     }`}
                 >
-                  <span className={`transition-all duration-300 ${selectedTimeSlot?.id === slot.id ? 'text-black' : ''}`}>
+                  <span
+                    className={`transition-all duration-300 ${
+                      selectedTimeSlot?.id === slot.id ? "text-black" : ""
+                    }`}
+                  >
                     {slot.time}
                   </span>
                 </button>
@@ -231,8 +271,8 @@ const DateTimeSelect = () => {
       </div>
 
       <div className="sticky-button-container">
-        <Button 
-          onClick={handleContinue} 
+        <Button
+          onClick={handleContinue}
           disabled={!selectedDate || !selectedTimeSlot}
           variant="cosmic"
           size="cosmic"
