@@ -1,0 +1,139 @@
+import { useEffect } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { User } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+
+// Define paddle animation keyframes
+const paddleAnimations = `
+  @keyframes bounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-8px); }
+  }
+  
+  @keyframes slowRotate {
+    0% { transform: rotate(-10deg); }
+    50% { transform: rotate(10deg); }
+    100% { transform: rotate(-10deg); }
+  }
+  
+  @keyframes ballBounce {
+    0% { transform: translateY(0); }
+    20% { transform: translateY(-12px); }
+    40% { transform: translateY(0); }
+    60% { transform: translateY(-8px); }
+    80% { transform: translateY(0); }
+    100% { transform: translateY(0); }
+  }
+  
+  @keyframes textGlow {
+    0%, 100% { text-shadow: 0 0 5px rgba(255, 165, 0, 0.5); }
+    50% { text-shadow: 0 0 15px rgba(255, 165, 0, 0.8), 0 0 20px rgba(255, 165, 0, 0.5); }
+  }
+  
+  .paddle-container {
+    animation: slowRotate 3s ease-in-out infinite;
+    transform-origin: bottom right;
+  }
+  
+  .ball-bounce {
+    animation: ballBounce 2s ease-in-out infinite;
+  }
+  
+  .eclipse-text {
+    animation: textGlow 3s ease-in-out infinite;
+  }
+`;
+
+interface NavbarProps {
+  variant?: "default" | "cosmic";
+}
+
+const Navbar = ({ variant = "default" }: NavbarProps) => {
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  // Add animation styles when component mounts
+  useEffect(() => {
+    // Create style element for paddle animations
+    const styleElement = document.createElement("style");
+    styleElement.innerHTML = paddleAnimations;
+    document.head.appendChild(styleElement);
+
+    // Cleanup function
+    return () => {
+      document.head.removeChild(styleElement);
+    };
+  }, []);
+
+  const isCosmicVariant = variant === "cosmic" || location.pathname === "/";
+
+  const handleProfileClick = () => {
+    navigate("/profile");
+  };
+
+  return (
+    <header className="fixed top-0 left-0 right-0 z-50">
+      <nav
+        className={cn(
+          "px-4 py-3 flex items-center justify-between",
+          isCosmicVariant
+            ? "bg-[#03001C] border-b border-[#301E67]"
+            : "bg-eclipse-dark border-b border-eclipse-purple"
+        )}
+      >
+        <div className="flex items-center">
+          <Link to="/" className="flex items-center space-x-2">
+            <div className="relative h-10 w-16 paddle-container">
+              {/* Pickleball paddle */}
+              <div className="absolute bottom-0 right-0 w-10 h-14 flex items-center justify-center">
+                <div className="relative w-8 h-10">
+                  {/* Paddle handle */}
+                  <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-2 h-4 bg-amber-700 rounded-b-sm"></div>
+
+                  {/* Paddle face */}
+                  <div className="absolute top-0 left-0 w-8 h-8 bg-gradient-to-br from-red-400 to-red-500 rounded-full shadow-md"></div>
+                </div>
+              </div>
+
+              {/* Bouncing balls */}
+              <div className="absolute top-0 left-0 space-y-1">
+                <div
+                  className="w-3 h-3 rounded-full bg-yellow-400 opacity-80 ball-bounce"
+                  style={{ animationDelay: "0s" }}
+                ></div>
+                <div
+                  className="w-3 h-3 rounded-full bg-yellow-400 opacity-80 ball-bounce"
+                  style={{ animationDelay: "0.2s" }}
+                ></div>
+                <div
+                  className="w-3 h-3 rounded-full bg-yellow-400 opacity-80 ball-bounce"
+                  style={{ animationDelay: "0.4s" }}
+                ></div>
+              </div>
+            </div>
+
+            <span className="font-semibold text-lg text-white eclipse-text">
+              Eclipse
+            </span>
+          </Link>
+        </div>
+
+        {/* Profile Button */}
+        <div>
+          <Button
+            variant={isCosmicVariant ? "cosmic" : "default"}
+            size="sm"
+            className="flex items-center gap-2"
+            onClick={handleProfileClick}
+          >
+            <User size={16} />
+            <span className="hidden md:inline">Profile</span>
+          </Button>
+        </div>
+      </nav>
+    </header>
+  );
+};
+
+export default Navbar;
