@@ -23,12 +23,15 @@ export interface BookingData {
     name: string;
     location: string;
   };
+  courtNumber?: number;
   date: string;
   timeSlot: {
     _id: string;
     startTime: string;
     endTime: string;
   };
+  startTime?: string;
+  endTime?: string;
   status: string;
   numberOfPlayers: number;
   totalPrice: number;
@@ -43,220 +46,49 @@ export interface BookingData {
 export const createBooking = async (
   phoneNumber: string,
   name: string,
-  courtId: string,
+  courtNumber: string,
   date: string | Date,
-  timeSlotId: string,
+  timeSlotString: string,
   numberOfPlayers: number = 4,
-  notes: string = "",
-  paymentStatus: string = "pay-at-court"
+  notes: string = ""
 ): Promise<any> => {
   try {
     // Format date to ISO string
     const formattedDate = new Date(date).toISOString();
 
-    // Format the timeSlotId to a consistent format that the backend can handle
-    let formattedTimeSlotId = timeSlotId;
+    // Extract start and end times from timeSlotId
+    let startTime = "08:00";
+    let endTime = "09:00";
 
-    // Validate and fix time format issues
-    try {
-      if (timeSlotId.includes("-")) {
-        // Check for formats like "10:00 AM-" or "08:00-" with missing end time
-        const parts = timeSlotId.split("-");
-
-        // If the second part is empty or missing, fix it
-        if (!parts[1] || parts[1].trim() === "") {
-          // Extract the start time and compute an end time (1 hour later)
-          const startTimePart = parts[0].trim();
-
-          if (startTimePart.includes("AM") || startTimePart.includes("PM")) {
-            // Handle 12-hour format
-            const timeParts = startTimePart.split(" ");
-            const time = timeParts[0];
-            const ampm = timeParts[1];
-
-            // Extract hour and minute
-            let hourNum = 0;
-            let minute = "00";
-
-            if (time.includes(":")) {
-              const [hour, min] = time.split(":");
-              hourNum = parseInt(hour);
-              minute = min || "00";
-            } else {
-              // Handle case where there's just a number without minutes
-              hourNum = parseInt(time);
-              minute = "00";
-            }
-
-            // Ensure hour is a valid number
-            if (isNaN(hourNum)) {
-              hourNum = 8; // Default to 8am if parsing fails
-              console.warn(`Invalid hour format: ${time}, defaulting to 8`);
-            }
-
-            // Adjust hour for AM/PM
-            if (ampm === "PM" && hourNum < 12) hourNum += 12;
-            else if (ampm === "AM" && hourNum === 12) hourNum = 0;
-
-            // Ensure hour is between 0-23
-            hourNum = Math.max(0, Math.min(23, hourNum));
-
-            // Calculate end hour (1 hour later)
-            const endHour = (hourNum + 1) % 24;
-
-            // Format in 24-hour time for backend
-            formattedTimeSlotId = `${hourNum
-              .toString()
-              .padStart(2, "0")}:${minute}-${endHour
-              .toString()
-              .padStart(2, "0")}:${minute}`;
-          } else {
-            // Handle 24-hour format
-            let hourNum = 0;
-            let minute = "00";
-
-            if (startTimePart.includes(":")) {
-              const [hour, min] = startTimePart.split(":");
-              hourNum = parseInt(hour);
-              minute = min || "00";
-            } else {
-              // Handle case where there's just a number without minutes
-              hourNum = parseInt(startTimePart);
-              minute = "00";
-            }
-
-            // Ensure hour is a valid number
-            if (isNaN(hourNum)) {
-              hourNum = 8; // Default to 8am if parsing fails
-              console.warn(
-                `Invalid hour format: ${startTimePart}, defaulting to 8`
-              );
-            }
-
-            // Ensure hour is between 0-23
-            hourNum = Math.max(0, Math.min(23, hourNum));
-
-            const endHour = (hourNum + 1) % 24;
-
-            formattedTimeSlotId = `${hourNum
-              .toString()
-              .padStart(2, "0")}:${minute}-${endHour
-              .toString()
-              .padStart(2, "0")}:${minute}`;
-          }
-        } else if (
-          parts[0].includes("AM") ||
-          parts[0].includes("PM") ||
-          parts[1].includes("AM") ||
-          parts[1].includes("PM")
-        ) {
-          // Handle timeSlot with both start and end times in 12-hour format
-          let startHour = 8;
-          let startMinute = "00";
-          let endHour = 9;
-          let endMinute = "00";
-
-          // Process start time
-          const startPart = parts[0].trim();
-          if (startPart.includes("AM") || startPart.includes("PM")) {
-            const timeParts = startPart.split(" ");
-            const time = timeParts[0];
-            const ampm = timeParts[1];
-
-            if (time.includes(":")) {
-              const [hour, min] = time.split(":");
-              startHour = parseInt(hour);
-              startMinute = min || "00";
-
-              if (ampm === "PM" && startHour < 12) startHour += 12;
-              else if (ampm === "AM" && startHour === 12) startHour = 0;
-            }
-          }
-
-          // Process end time
-          const endPart = parts[1].trim();
-          if (endPart.includes("AM") || endPart.includes("PM")) {
-            const timeParts = endPart.split(" ");
-            const time = timeParts[0];
-            const ampm = timeParts[1];
-
-            if (time.includes(":")) {
-              const [hour, min] = time.split(":");
-              endHour = parseInt(hour);
-              endMinute = min || "00";
-
-              if (ampm === "PM" && endHour < 12) endHour += 12;
-              else if (ampm === "AM" && endHour === 12) endHour = 0;
-            }
-          }
-
-          // Ensure hours are valid
-          startHour = Math.max(0, Math.min(23, startHour));
-          endHour = Math.max(0, Math.min(23, endHour));
-
-          // Format in 24-hour time
-          formattedTimeSlotId = `${startHour
-            .toString()
-            .padStart(2, "0")}:${startMinute}-${endHour
-            .toString()
-            .padStart(2, "0")}:${endMinute}`;
-        }
-      } else if (!timeSlotId.includes("-")) {
-        // If no hyphen, assume it's just a start time and add an hour for end time
-        let startTime = timeSlotId.trim();
-        let startHour = 8;
-        let startMinute = "00";
-
-        if (startTime.includes("AM") || startTime.includes("PM")) {
-          // Handle 12-hour format without end time
-          const timeParts = startTime.split(" ");
-          const time = timeParts[0];
-          const ampm = timeParts[1] || "AM";
-
-          if (time.includes(":")) {
-            const [hour, min] = time.split(":");
-            startHour = parseInt(hour);
-            startMinute = min || "00";
-          } else {
-            startHour = parseInt(time);
-          }
-
-          if (ampm === "PM" && startHour < 12) startHour += 12;
-          else if (ampm === "AM" && startHour === 12) startHour = 0;
-        } else {
-          // Handle 24-hour format without end time
-          if (startTime.includes(":")) {
-            const [hour, min] = startTime.split(":");
-            startHour = parseInt(hour);
-            startMinute = min || "00";
-          } else {
-            // Single number provided
-            startHour = parseInt(startTime);
-          }
-        }
-
-        // Ensure hour is valid
-        if (isNaN(startHour)) {
-          startHour = 8; // Default to 8am if parsing fails
-        }
-
-        startHour = Math.max(0, Math.min(23, startHour));
-        const endHour = (startHour + 1) % 24;
-
-        formattedTimeSlotId = `${startHour
-          .toString()
-          .padStart(2, "0")}:${startMinute}-${endHour
-          .toString()
-          .padStart(2, "0")}:${startMinute}`;
-      }
-    } catch (error) {
-      console.warn("Error formatting time slot, using default", error);
-      // Provide a safe default if time parsing fails
-      formattedTimeSlotId = "08:00-09:00";
+    if (timeSlotString.includes("-")) {
+      const [start, end] = timeSlotString.split("-");
+      startTime = start.trim();
+      endTime = end.trim();
     }
 
+    // Format times to include AM/PM in IST
+    const formatTimeToIST = (timeString: string) => {
+      // If already has AM/PM, return as is
+      if (timeString.includes("AM") || timeString.includes("PM")) {
+        return timeString;
+      }
+
+      // Extract hours from time (assuming 24-hour format like "14:00")
+      let [hours, minutes] = timeString.split(":");
+      const hoursNum = parseInt(hours);
+
+      // Convert to 12-hour format with AM/PM
+      const period = hoursNum >= 12 ? "PM" : "AM";
+      const hours12 = hoursNum % 12 || 12; // Convert 0 to 12 for 12 AM
+
+      return `${hours12}:${minutes} ${period}`;
+    };
+
+    const formattedStartTime = formatTimeToIST(startTime);
+    const formattedEndTime = formatTimeToIST(endTime);
+
     console.log(
-      `Formatting timeSlotId from ${timeSlotId} to ${formattedTimeSlotId}`
+      `Creating booking with IST times: ${formattedStartTime} to ${formattedEndTime}`
     );
 
     const response = await fetch(`${API_URL}/bookings`, {
@@ -267,12 +99,12 @@ export const createBooking = async (
       body: JSON.stringify({
         phoneNumber,
         name,
-        courtId,
+        courtNumber,
         date: formattedDate,
-        timeSlotId: formattedTimeSlotId,
+        startTime: formattedStartTime,
+        endTime: formattedEndTime,
         numberOfPlayers,
         notes,
-        paymentStatus,
       }),
     });
 
@@ -302,7 +134,34 @@ export const getUserBookings = async (
     }
 
     const result: ApiResponse<BookingData[]> = await response.json();
-    return result.data?.bookings || [];
+
+    // Transform the bookings to ensure they have the expected structure
+    const bookings = result.data?.bookings || [];
+
+    return bookings.map((booking) => {
+      // Ensure court object exists
+      if (!booking.court) {
+        booking.court = {
+          _id: booking._id,
+          name: String(booking.courtNumber || ""),
+          location: "Eclipse Pickleball",
+        };
+      }
+
+      // Ensure timeSlot object exists
+      if (!booking.timeSlot) {
+        booking.timeSlot = {
+          _id: booking._id,
+          startTime: booking.startTime || "",
+          endTime: booking.endTime || "",
+        };
+      }
+
+      return {
+        ...booking,
+        totalPrice: booking.totalPrice || 800,
+      };
+    });
   } catch (error) {
     console.error("Error fetching user bookings:", error);
     throw error;

@@ -32,6 +32,7 @@ import { ArrowLeft, MapPin, Calendar, Clock } from "lucide-react";
 import { getUser } from "@/lib/auth";
 import { createBooking } from "@/lib/api";
 import { toast } from "sonner";
+import { formatTimeRangeIST } from "@/lib/utils";
 
 const formSchema = z.object({
   name: z.string().min(2, { message: "Name must be at least 2 characters" }),
@@ -82,35 +83,7 @@ const BookingDetailsPage = () => {
 
     if (!isSubmitting) {
       try {
-        setIsSubmitting(true);
-
-        // Prepare time slot ID based on the booking time slot
-        let timeSlotId = "";
-        if (booking.timeSlot) {
-          if (booking.timeSlot.id) {
-            timeSlotId = booking.timeSlot.id;
-          } else {
-            timeSlotId = `${booking.timeSlot.startTime}-${booking.timeSlot.endTime}`;
-          }
-        }
-
-        // Court ID from the selected court
-        const courtId = booking.court?.id || "";
-
-        // Format the date properly
-        const formattedDate = booking.date ? booking.date : new Date();
-
-        const createdBooking = await createBooking(
-          form.getValues().phoneNumber,
-          form.getValues().name,
-          courtId,
-          formattedDate,
-          timeSlotId,
-          form.getValues().players || 4,
-          form.getValues().notes
-        );
-
-        // Update booking with details
+        setIsSubmitting(true); // Update booking with details
         setBookingDetails({
           name: form.getValues().name,
           email: form.getValues().email,
@@ -214,7 +187,12 @@ const BookingDetailsPage = () => {
                 <span className="text-gray-600">TIME</span>
               </div>
               <div className="font-medium text-right">
-                {booking.timeSlot?.startTime || "---"}
+                {booking.timeSlot
+                  ? formatTimeRangeIST(
+                      booking.timeSlot.startTime,
+                      booking.timeSlot.endTime
+                    )
+                  : "---"}
               </div>
             </div>
 

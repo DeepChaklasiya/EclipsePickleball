@@ -7,6 +7,7 @@ import Header from "@/components/Header";
 import { useBooking } from "@/context/BookingContext";
 import html2canvas from "html2canvas";
 import { createBooking } from "@/lib/api";
+import { formatTimeRangeIST, formatTimeToIST } from "@/lib/utils";
 import { toast } from "sonner";
 import { getUser } from "@/lib/auth";
 
@@ -65,32 +66,34 @@ const BookingConfirmation = () => {
         }
 
         // Format the time slot ID correctly - backend expects a string like "08:00-09:00"
-        let timeSlotString;
+        let startTime = "08:00";
+        let endTime = "09:00";
 
-        // Check if we have a time slot with an ID that looks like a MongoDB ObjectId
-        if (
-          booking.timeSlot?.id &&
-          /^[0-9a-fA-F]{24}$/.test(booking.timeSlot.id)
-        ) {
-          // Use the actual ID
-          timeSlotString = booking.timeSlot.id;
-        } else {
-          // Format as a time range string
-          timeSlotString = `${booking.timeSlot!.startTime}-${
-            booking.timeSlot!.endTime
-          }`;
+        // Check if we have a time slot with start and end times
+        if (booking.timeSlot?.startTime) {
+          startTime = formatTimeRangeIST(booking.timeSlot.startTime).split(
+            " - "
+          )[0];
+          endTime = formatTimeRangeIST(booking.timeSlot.startTime).split(
+            " - "
+          )[1];
+        } else if (booking.timeSlot?.id && booking.timeSlot.id.includes("-")) {
+          // Extract from time range format
+          const [start, end] = booking.timeSlot.id.split("-");
+          startTime = start.trim();
+          endTime = end.trim();
         }
 
         // Ensure the data format matches what the backend expects
         const bookingData = {
           phoneNumber: user.phoneNumber,
           name: user.name,
-          courtId: booking.court!.id,
+          courtNumber: String(`${8 - Number(booking.court.id)}`),
           date: booking.date!.toISOString(),
-          timeSlotId: timeSlotString,
+          startTime,
+          endTime,
           numberOfPlayers: booking.details!.players || 4,
           notes: booking.details!.notes || "",
-          paymentStatus: "pay-at-court",
         };
 
         console.log("Sending booking data:", bookingData);
@@ -99,12 +102,11 @@ const BookingConfirmation = () => {
         const savedBooking = await createBooking(
           bookingData.phoneNumber,
           bookingData.name,
-          bookingData.courtId,
+          bookingData.courtNumber,
           bookingData.date,
-          bookingData.timeSlotId,
+          `${startTime}-${endTime}`,
           bookingData.numberOfPlayers,
-          bookingData.notes,
-          bookingData.paymentStatus
+          bookingData.notes
         );
 
         setIsSaved(true);
@@ -236,7 +238,9 @@ const BookingConfirmation = () => {
             <div className="grid grid-cols-2 gap-2 text-center mb-4 md:mb-6 w-full">
               <div className="flex flex-col items-center">
                 <span className="text-xs uppercase">COURT</span>
-                <span className="font-bold text-lg">{booking.court.id}</span>
+                <span className="font-bold text-lg">
+                  {8 - Number(booking.court.id)}
+                </span>
               </div>
               <div className="flex flex-col items-center">
                 <span className="text-xs uppercase">LOCATION</span>
@@ -256,9 +260,10 @@ const BookingConfirmation = () => {
                   {format(booking.date, "dd MMM").toUpperCase()}
                 </span>
                 <span className="mr-2 md:mr-4">
-                  {booking.timeSlot.startTime} PM
+                  {formatTimeToIST(booking.timeSlot.startTime)}
                 </span>
-                <span>{booking.timeSlot.endTime} PM</span>
+                <span>{formatTimeToIST(booking.timeSlot.endTime)}</span>
+                <span className="ml-2">IST</span>
               </div>
             </div>
 

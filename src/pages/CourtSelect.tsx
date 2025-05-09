@@ -408,7 +408,7 @@ const CourtSelect = () => {
 
     return `${booking.location.name} • ${format(booking.date, "MMM d")} • ${
       booking.timeSlot.startTime
-    }-${booking.timeSlot.endTime}`;
+    }`;
   };
 
   // Define the animation class

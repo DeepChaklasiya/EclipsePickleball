@@ -2,48 +2,53 @@ const mongoose = require("mongoose");
 
 const bookingSchema = new mongoose.Schema(
   {
-    user: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-      required: [true, "Booking must belong to a user"],
+    // User information
+    name: {
+      type: String,
+      required: [true, "Name is required"],
+      trim: true,
     },
-    court: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Court",
-      required: [true, "Booking must belong to a court"],
+    phoneNumber: {
+      type: String,
+      required: [true, "Phone number is required"],
+      trim: true,
+    },
+
+    // Booking details
+    courtNumber: {
+      type: Number,
+      required: [true, "Court number is required"],
+      min: 1,
+      max: 7,
     },
     date: {
       type: Date,
-      required: [true, "Booking date is required"],
+      required: [true, "Date is required"],
     },
-    timeSlot: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "TimeSlot",
-      required: [true, "Booking must have a time slot"],
-    },
-    status: {
+    startTime: {
       type: String,
-      enum: ["pending", "confirmed", "cancelled"],
-      default: "confirmed",
+      required: [true, "Start time is required"],
     },
+    endTime: {
+      type: String,
+      required: [true, "End time is required"],
+    },
+
+    // Additional details
     numberOfPlayers: {
       type: Number,
-      required: [true, "Number of players is required"],
+      default: 4,
       min: 1,
       max: 6,
-    },
-    totalPrice: {
-      type: Number,
-      required: [true, "Total price is required"],
-    },
-    paymentStatus: {
-      type: String,
-      enum: ["pay-at-court"],
-      default: "pay-at-court",
     },
     notes: {
       type: String,
       trim: true,
+    },
+    status: {
+      type: String,
+      enum: ["confirmed", "cancelled"],
+      default: "confirmed",
     },
     bookingCode: {
       type: String,
@@ -52,24 +57,27 @@ const bookingSchema = new mongoose.Schema(
   },
   {
     timestamps: true,
-    toJSON: { virtuals: true },
-    toObject: { virtuals: true },
   }
 );
 
-// Generate unique booking code before saving
+// Generate a unique booking code before saving
 bookingSchema.pre("save", async function (next) {
-  if (this.isNew || !this.bookingCode) {
-    const timestamp = Math.floor(Date.now() / 1000).toString(36);
-    const random = Math.random().toString(36).substr(2, 5).toUpperCase();
-    this.bookingCode = `EP-${timestamp}-${random}`;
+  if (!this.bookingCode) {
+    const characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+    let result = "";
+    const charactersLength = characters.length;
+
+    for (let i = 0; i < 8; i++) {
+      result += characters.charAt(Math.floor(Math.random() * charactersLength));
+    }
+
+    this.bookingCode = result;
   }
   next();
 });
 
-// Indexes for faster queries
-bookingSchema.index({ user: 1, date: 1 });
-bookingSchema.index({ court: 1, date: 1, timeSlot: 1 });
+// Index for faster queries
+bookingSchema.index({ date: 1, courtNumber: 1, startTime: 1 });
 
 const Booking = mongoose.model("Booking", bookingSchema);
 

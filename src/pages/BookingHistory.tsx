@@ -4,6 +4,7 @@ import { format, isPast } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { getUser } from "@/lib/auth";
 import { getUserBookings, BookingData } from "@/lib/api";
+import { formatTimeRangeIST } from "@/lib/utils";
 import { Calendar, Clock, MapPin, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -136,6 +137,31 @@ interface BookingCardProps {
 const BookingCard = ({ booking, isPast = false }: BookingCardProps) => {
   const bookingDate = new Date(booking.date);
 
+  // Get court display name - handle both direct courtNumber and nested court.name
+  const getCourtDisplayName = () => {
+    if (booking.courtNumber) {
+      return `${booking.courtNumber}`;
+    } else if (booking.court?.name) {
+      return booking.court.name;
+    } else {
+      return "Unknown";
+    }
+  };
+
+  // Get time slot display
+  const getTimeDisplay = () => {
+    if (booking.startTime && booking.endTime) {
+      return formatTimeRangeIST(booking.startTime, booking.endTime);
+    } else if (booking.timeSlot?.startTime && booking.timeSlot?.endTime) {
+      return formatTimeRangeIST(
+        booking.timeSlot.startTime,
+        booking.timeSlot.endTime
+      );
+    } else {
+      return "Time not specified";
+    }
+  };
+
   return (
     <div
       className={`bg-gray-800/30 rounded-lg p-4 hover:bg-gray-800/50 transition-all border-l-4 ${
@@ -145,7 +171,7 @@ const BookingCard = ({ booking, isPast = false }: BookingCardProps) => {
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between">
         <div className="mb-4 md:mb-0">
           <div className="flex items-center text-lg font-medium mb-1">
-            <span>Court {booking.court.name}</span>
+            <span>Court {getCourtDisplayName()}</span>
             {!isPast && (
               <span className="ml-3 text-xs bg-green-900/60 text-green-300 px-2 py-0.5 rounded-full">
                 {booking.status}
@@ -161,14 +187,12 @@ const BookingCard = ({ booking, isPast = false }: BookingCardProps) => {
 
             <div className="flex items-center">
               <Clock className="h-4 w-4 mr-2" />
-              <span>
-                {booking.timeSlot.startTime} - {booking.timeSlot.endTime}
-              </span>
+              <span>{getTimeDisplay()}</span>
             </div>
 
             <div className="flex items-center">
               <MapPin className="h-4 w-4 mr-2" />
-              <span>{booking.court.location}</span>
+              <span>{booking.court?.location || "Eclipse Pickleball"}</span>
             </div>
           </div>
         </div>
@@ -179,13 +203,13 @@ const BookingCard = ({ booking, isPast = false }: BookingCardProps) => {
           </div>
 
           <div className="text-lg font-bold text-amber-300">
-            ₹{booking.totalPrice}
+            ₹{booking.totalPrice || 800}
           </div>
 
           <div className="text-xs text-gray-400">
             {booking.paymentStatus === "pay-at-court"
               ? "Pay at Court"
-              : booking.paymentStatus}
+              : booking.paymentStatus || "Pay at Court"}
           </div>
         </div>
       </div>
