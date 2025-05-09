@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { Label } from "@/components/ui/label";
 import { setUser } from "@/lib/auth";
+import { OTP_CLIENT_ID } from "@/lib/env";
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -137,7 +138,7 @@ const AuthModal = ({ isOpen, onClose }: AuthModalProps) => {
             <div
               ref={signInButtonRef}
               className="pe_signin_button flex justify-center"
-              data-client-id="11342325218017613728"
+              data-client-id={OTP_CLIENT_ID}
             ></div>
 
             <Button
