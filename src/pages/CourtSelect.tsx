@@ -177,7 +177,7 @@ const CourtSelect = () => {
               slotNumber = hour - 11; // 12pm is slot 1, 1pm is slot 2, etc.
             } else if (sectionPrefix === "e") {
               // evening (16-21)
-              slotNumber = hour - 15; // 4pm is slot 1, 5pm is slot 2, etc.
+              slotNumber = hour - 17; // 6pm is slot 1, 7pm is slot 2, etc.
             }
           }
 
@@ -355,7 +355,7 @@ const CourtSelect = () => {
   const isCourtBooked = (courtId: string): boolean => {
     // Convert courtId to use the ID system in the backend
     // In the frontend we use CourtId 1-7, but the backend might store them differently
-    const backendCourtId = courtId;
+    const backendCourtId = String(8 - Number(courtId));
     return bookedCourts.includes(backendCourtId);
   };
 
