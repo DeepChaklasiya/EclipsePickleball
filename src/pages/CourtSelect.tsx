@@ -8,6 +8,7 @@ import { useBooking } from "@/context/BookingContext";
 import { toast } from "sonner";
 import { getBookedCourts } from "@/lib/api";
 import { Loader2 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 // Define keyframe animations
 const courtAnimations = `
@@ -122,6 +123,7 @@ const CourtSelect = () => {
   const [animationComplete, setAnimationComplete] = useState(false);
   const [showBuffer, setShowBuffer] = useState(false);
   const [bufferComplete, setBufferComplete] = useState(true);
+  const [buttonHighlighted, setButtonHighlighted] = useState(false);
 
   const [selectedCourtId, setSelectedCourtId] = useState<string | undefined>(
     booking.court?.id
@@ -263,18 +265,6 @@ const CourtSelect = () => {
   const courts = [
     {
       id: "1",
-      name: "Mercury",
-      image: "",
-      color: "bg-gray-400",
-      // description: "MERCURY - Small and fast",
-      icon: (
-        <div className="absolute -top-4 -left-4 w-8 h-8 rounded-full bg-gray-300 border border-gray-400 shadow-lg">
-          <div className="w-full h-full rounded-full bg-gradient-to-br from-gray-200 to-gray-500"></div>
-        </div>
-      ),
-    },
-    {
-      id: "2",
       name: "Venus",
       image: "",
       color: "bg-yellow-300",
@@ -282,6 +272,18 @@ const CourtSelect = () => {
       icon: (
         <div className="absolute -top-4 -left-4 w-8 h-8 rounded-full bg-yellow-200 border border-yellow-400 shadow-lg">
           <div className="w-full h-full rounded-full bg-gradient-to-br from-yellow-100 to-yellow-500"></div>
+        </div>
+      ),
+    },
+    {
+      id: "2",
+      name: "Mercury",
+      image: "",
+      color: "bg-gray-400",
+      description: "MERCURY - Small and fast",
+      icon: (
+        <div className="absolute -top-4 -left-4 w-8 h-8 rounded-full bg-gray-300 border border-gray-400 shadow-lg">
+          <div className="w-full h-full rounded-full bg-gradient-to-br from-gray-200 to-gray-500"></div>
         </div>
       ),
     },
@@ -339,13 +341,13 @@ const CourtSelect = () => {
     },
     {
       id: "7",
-      name: "Uranus",
+      name: "Neptune",
       image: "",
-      color: "bg-cyan-500",
-      description: "URANUS - The ice giant",
+      color: "bg-blue-700",
+      description: "NEPTUNE - The ice giant",
       icon: (
-        <div className="absolute -top-4 -left-4 w-8 h-8 rounded-full bg-cyan-300 border border-cyan-600 shadow-lg">
-          <div className="w-full h-full rounded-full bg-gradient-to-br from-cyan-200 to-cyan-600"></div>
+        <div className="absolute -top-4 -left-4 w-8 h-8 rounded-full bg-blue-600 border border-blue-800 shadow-lg">
+          <div className="w-full h-full rounded-full bg-gradient-to-br from-blue-400 to-blue-800"></div>
         </div>
       ),
     },
@@ -367,6 +369,10 @@ const CourtSelect = () => {
       setSelectedCourtId(undefined);
     } else {
       setSelectedCourtId(courtId);
+      
+      // Briefly flash the continue button when court is selected
+      setButtonHighlighted(true);
+      setTimeout(() => setButtonHighlighted(false), 1000);
     }
   };
 
@@ -446,7 +452,7 @@ const CourtSelect = () => {
       "bg-red-500": { from: "from-red-300", to: "to-red-600" },
       "bg-orange-400": { from: "from-orange-200", to: "to-orange-600" },
       "bg-yellow-600": { from: "from-yellow-200", to: "to-yellow-600" },
-      "bg-cyan-500": { from: "from-cyan-200", to: "to-cyan-600" },
+      "bg-blue-700": { from: "from-blue-400", to: "to-blue-800" },
     };
 
     return {
@@ -582,7 +588,7 @@ const CourtSelect = () => {
                                       : "bg-gradient-to-r from-pink-400/90 to-amber-300/90 text-black"
                                   } text-sm font-bold py-1 px-4 rounded-full border border-white whitespace-nowrap`}
                                 >
-                                  Court {7 - index}: {court.name}
+                                  Court {index + 1}: {court.name}
                                   {isBooked && (
                                     <span className="ml-2">(Booked)</span>
                                   )}
@@ -667,6 +673,15 @@ const CourtSelect = () => {
                     <div className="absolute top-2/3 w-full h-1.5 bg-orange-700/70"></div>
                   </>
                 )}
+                
+                {/* Special features for Neptune */}
+                {bufferPlanet.name === "Neptune" && (
+                  <>
+                    <div className="absolute w-full h-full opacity-70 bg-blue-900 mix-blend-overlay"></div>
+                    <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-12 h-1 bg-blue-300/60 rounded-full rotate-45"></div>
+                    <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-12 h-1 bg-blue-300/60 rounded-full -rotate-45"></div>
+                  </>
+                )}
               </div>
 
               {/* Small moon orbit for Earth */}
@@ -700,9 +715,20 @@ const CourtSelect = () => {
             disabled={!selectedCourtId || showBuffer}
             variant="cosmic"
             size="cosmic"
-            className="w-full"
+            className={cn(
+              "w-full relative group",
+              selectedCourtId && buttonHighlighted && "animate-pulse shadow-lg"
+            )}
           >
-            <span>CONTINUE</span>
+            <span className="flex items-center justify-center">
+              CONTINUE
+              <svg xmlns="http://www.w3.org/2000/svg" className={cn(
+                "h-5 w-5 ml-2 transition-transform group-hover:translate-x-1",
+                selectedCourtId && buttonHighlighted && "animate-bounce"
+              )} viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M10.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L12.586 11H5a1 1 0 110-2h7.586l-2.293-2.293a1 1 0 010-1.414z" clipRule="evenodd" />
+              </svg>
+            </span>
           </Button>
         )}
       </div>
