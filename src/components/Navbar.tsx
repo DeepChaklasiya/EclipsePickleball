@@ -100,7 +100,11 @@ const Navbar = ({ variant = "default" }: NavbarProps) => {
 
   const handleSignOut = () => {
     logout();
-    toast.success("You have been signed out");
+    toast.success("You have been signed out", {
+      position: "top-center",
+      duration: 3000,
+      className: "mt-16" // Add margin to push toast down below navbar
+    });
     navigate("/");
   };
 
