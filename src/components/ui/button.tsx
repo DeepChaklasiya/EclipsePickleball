@@ -18,14 +18,15 @@ const buttonVariants = cva(
           "bg-secondary text-secondary-foreground hover:bg-secondary/80",
         ghost: "hover:bg-accent hover:text-accent-foreground",
         link: "text-primary underline-offset-4 hover:underline",
-        cosmic: "bg-gradient-to-r from-pink-400 to-amber-300 text-black font-light tracking-wider rounded-full relative overflow-hidden transition-all duration-300 transform hover:scale-[1.02] hover:shadow-[0_0_20px_rgba(255,165,0,0.5)] after:content-[''] after:absolute after:inset-0 after:bg-gradient-to-r after:from-blue-500/10 after:to-purple-500/20 after:opacity-0 after:hover:opacity-100 after:transition-opacity after:duration-500 after:blur-md justify-center",
+        cosmic: "bg-gradient-to-r from-pink-400 to-amber-300 text-black font-medium tracking-wider rounded-xl shadow-lg relative overflow-hidden transition-all duration-300 transform hover:translate-y-[-2px] hover:shadow-[0_8px_20px_rgba(255,165,0,0.3)] border border-pink-300/20 backdrop-blur-sm justify-center",
+        "profile-minimal": "bg-[#5a5a8f] text-white hover:bg-[#46467a] rounded-lg border border-[#8282c3]/30 transition-all duration-300 ease-in-out shadow-sm hover:shadow-md hover:translate-y-[-1px]",
       },
       size: {
         default: "h-10 px-4 py-2",
         sm: "h-9 rounded-md px-3",
         lg: "h-11 rounded-md px-8",
         icon: "h-10 w-10",
-        cosmic: "py-4 px-8"
+        cosmic: "h-12 px-8"
       },
     },
     defaultVariants: {

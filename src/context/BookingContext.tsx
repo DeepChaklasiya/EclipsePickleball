@@ -65,7 +65,7 @@ const sampleLocations: Location[] = [
     id: "1",
     name: "Eclipse",
     address:
-      " Opp. Dream World Residency, G.D. Goenka School Road, Canal Road, Vesu, Surat, Gujarat 395007",
+      "Opp. Celestial dreams, Canal Pathway, VIP canal road, Vesu, Surat",
     image:
       "https://res.cloudinary.com/djbfmsyki/image/upload/v1746794916/Capture_jmrn1e.jpg",
   },

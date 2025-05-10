@@ -162,9 +162,12 @@ const Navbar = ({ variant = "default" }: NavbarProps) => {
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button
-                    variant={isCosmicVariant ? "cosmic" : "default"}
+                    variant="profile-minimal"
                     size="sm"
-                    className="flex items-center gap-2"
+                    className={cn(
+                      "flex items-center gap-2",
+                      isCosmicVariant && "bg-[#5d4a8a] hover:bg-[#4a3a7a] border-[#8f7ad4]/30"
+                    )}
                   >
                     <User size={16} />
                     <span className="hidden md:inline">
@@ -172,13 +175,13 @@ const Navbar = ({ variant = "default" }: NavbarProps) => {
                     </span>
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={handleProfileClick}>
+                <DropdownMenuContent align="end" className="bg-white/95 backdrop-blur-sm border-[#8282c3]/30 shadow-md rounded-lg p-1">
+                  <DropdownMenuItem onClick={handleProfileClick} className="hover:bg-slate-100 rounded-md">
                     <User className="mr-2 h-4 w-4" />
                     <span>Profile</span>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={handleSignOut}>
+                  <DropdownMenuItem onClick={handleSignOut} className="hover:bg-slate-100 rounded-md">
                     <LogOut className="mr-2 h-4 w-4" />
                     <span>Sign out</span>
                   </DropdownMenuItem>
@@ -186,9 +189,12 @@ const Navbar = ({ variant = "default" }: NavbarProps) => {
               </DropdownMenu>
             ) : (
               <Button
-                variant={isCosmicVariant ? "cosmic" : "default"}
+                variant="profile-minimal"
                 size="sm"
-                className="flex items-center gap-2"
+                className={cn(
+                  "flex items-center gap-2",
+                  isCosmicVariant && "bg-[#5d4a8a] hover:bg-[#4a3a7a] border-[#8f7ad4]/30"
+                )}
                 onClick={handleProfileClick}
               >
                 <User size={16} />
