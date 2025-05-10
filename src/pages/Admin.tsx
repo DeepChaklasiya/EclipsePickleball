@@ -3,6 +3,7 @@ import { format, isValid, parseISO } from "date-fns";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
+import { API_URL } from "@/lib/env";
 
 import {
   Table,
@@ -67,7 +68,6 @@ interface Booking {
   updatedAt: string;
 }
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
 const ADMIN_PASSWORD = "8140552219";
 
 const Admin = () => {
