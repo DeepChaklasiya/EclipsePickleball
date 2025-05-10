@@ -86,7 +86,7 @@ const Index = () => {
 
           <h1 className="text-2xl sm:text-3xl font-light tracking-wider mb-4 text-white">
             <span className="bg-gradient-to-r from-pink-400 to-amber-300 bg-clip-text text-transparent">
-              Serving under the shadow—pickleball eclipse style
+              Pickleball just went Interstellar!!
             </span>{" "}
             {/* <span className="font-light tracking-wider">PICKLEBALL</span> */}
           </h1>
