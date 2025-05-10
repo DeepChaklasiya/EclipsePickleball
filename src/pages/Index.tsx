@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import AuthModal from "@/components/AuthModal";
+import { isAuthenticated } from "@/lib/auth";
+import { useNavigate } from "react-router-dom";
 
 const Index = () => {
-  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [starCount] = useState(50);
   const [stars, setStars] = useState<
     Array<{
@@ -15,6 +16,8 @@ const Index = () => {
       duration: number;
     }>
   >([]);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const navigate = useNavigate();
 
   // Generate stars with random positions for the cosmic background
   useEffect(() => {
@@ -28,6 +31,16 @@ const Index = () => {
     }));
     setStars(newStars);
   }, [starCount]);
+
+  const handleBookCourtClick = () => {
+    if (isAuthenticated()) {
+      // User is already authenticated, redirect to location selection
+      navigate("/location-select");
+    } else {
+      // User is not authenticated, open auth modal
+      setIsAuthModalOpen(true);
+    }
+  };
 
   return (
     <div className="min-h-screen flex flex-col relative overflow-hidden bg-black">
@@ -71,9 +84,9 @@ const Index = () => {
             className="w-48 h-auto mx-auto mb-8 drop-shadow-[0_0_8px_rgba(255,165,0,0.6)]"
           />
 
-          <h1 className="text-4xl sm:text-5xl font-light tracking-wider mb-4 text-white">
+          <h1 className="text-2xl sm:text-3xl font-light tracking-wider mb-4 text-white">
             <span className="bg-gradient-to-r from-pink-400 to-amber-300 bg-clip-text text-transparent">
-              Coming Soon!
+              Serving under the shadow—pickleball eclipse style
             </span>{" "}
             {/* <span className="font-light tracking-wider">PICKLEBALL</span> */}
           </h1>
@@ -92,7 +105,7 @@ const Index = () => {
 
       <div className="sticky-button-container w-full max-w-xs mx-auto">
         <Button
-          onClick={() => setIsAuthModalOpen(true)}
+          onClick={handleBookCourtClick}
           variant="cosmic"
           size="cosmic"
           className="w-full"

@@ -4,22 +4,27 @@ import React, { createContext, useContext, useState, ReactNode } from "react";
 export interface Location {
   id: string;
   name: string;
-  address: string;
-  image: string;
+  address?: string;
+  image?: string;
+  status?: string;
 }
 
 // Time slot type
 export interface TimeSlot {
-  id: string;
+  id?: string;
   startTime: string;
   endTime: string;
+  section?: string;
 }
 
 // Court type
 export interface Court {
   id: string;
   name: string;
-  image: string;
+  image?: string;
+  color?: string;
+  description?: string;
+  icon?: React.ReactNode;
 }
 
 // Booking details type
@@ -61,7 +66,8 @@ const sampleLocations: Location[] = [
     name: "Eclipse",
     address:
       " Opp. Dream World Residency, G.D. Goenka School Road, Canal Road, Vesu, Surat, Gujarat 395007",
-    image: "/src/assets/images/milkyway.jpeg",
+    image:
+      "https://res.cloudinary.com/djbfmsyki/image/upload/v1746794916/Capture_jmrn1e.jpg",
   },
   // {
   //   id: '2',
