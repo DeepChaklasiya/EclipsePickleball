@@ -6,6 +6,7 @@ import Header from "@/components/Header";
 import BookingSteps from "@/components/BookingSteps";
 import { useBooking } from "@/context/BookingContext";
 import { toast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
 
 // Time slot types
 interface TimeSlot {
@@ -26,6 +27,8 @@ const DateTimeSelect = () => {
   const [selectedTimeSlot, setSelectedTimeSlot] = useState<
     TimeSlot | undefined
   >();
+  const [buttonHighlighted, setButtonHighlighted] = useState(false);
+  const selectionComplete = selectedDate && selectedTimeSlot;
 
   // Time slots organized by section
   const timeSlots: TimeSlot[] = [
@@ -57,10 +60,25 @@ const DateTimeSelect = () => {
   const handleDateSelect = (date: Date) => {
     setSelectedDate(date);
     setSelectedTimeSlot(undefined);
+    checkSelectionStatus();
   };
 
   const handleTimeSlotSelect = (timeSlot: TimeSlot) => {
     setSelectedTimeSlot(timeSlot);
+    
+    // If date is already selected, trigger the highlight animation
+    if (selectedDate) {
+      setButtonHighlighted(true);
+      setTimeout(() => setButtonHighlighted(false), 1000);
+    }
+  };
+
+  // Check if both date and time are selected to potentially trigger animation
+  const checkSelectionStatus = () => {
+    if (selectedDate && selectedTimeSlot) {
+      setButtonHighlighted(true);
+      setTimeout(() => setButtonHighlighted(false), 1000);
+    }
   };
 
   const handleContinue = () => {
@@ -101,8 +119,8 @@ const DateTimeSelect = () => {
     timeSlots.filter((slot) => slot.section === "evening");
 
   return (
-    <div className="page-container bg-black text-white min-h-screen">
-      <div className="content-with-sticky-button">
+    <div className="page-container bg-black text-white min-h-screen flex flex-col">
+      <div className="flex-grow overflow-y-auto pb-20">
         <Header showBackButton title="DATE & TIME" />
         <BookingSteps />
 
@@ -270,15 +288,30 @@ const DateTimeSelect = () => {
         </div>
       </div>
 
+      {/* Visual separator */}
+      <div className="h-4 bg-black"></div>
+
       <div className="sticky-button-container">
         <Button
           onClick={handleContinue}
           disabled={!selectedDate || !selectedTimeSlot}
           variant="cosmic"
           size="cosmic"
-          className="w-full"
+          className={cn(
+            "w-full relative group",
+            !selectionComplete && "opacity-75 cursor-not-allowed", 
+            selectionComplete && buttonHighlighted && "animate-pulse shadow-lg"
+          )}
         >
-          <span>CONTINUE</span>
+          <span className="flex items-center justify-center">
+            CONTINUE
+            <svg xmlns="http://www.w3.org/2000/svg" className={cn(
+              "h-5 w-5 ml-2 transition-transform group-hover:translate-x-1",
+              selectionComplete && buttonHighlighted && "animate-bounce"
+            )} viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M10.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L12.586 11H5a1 1 0 110-2h7.586l-2.293-2.293a1 1 0 010-1.414z" clipRule="evenodd" />
+            </svg>
+          </span>
         </Button>
       </div>
     </div>
