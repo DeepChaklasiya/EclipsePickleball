@@ -51,6 +51,7 @@ interface BookingContextType {
   locations: Location[];
   timeSlots: TimeSlot[];
   courts: Court[];
+  locationSelected: boolean;
   setBookingLocation: (location: Location) => void;
   setBookingDate: (date: Date) => void;
   setBookingTimeSlot: (timeSlot: TimeSlot) => void;
@@ -128,9 +129,11 @@ export const BookingProvider: React.FC<{ children: ReactNode }> = ({
   children,
 }) => {
   const [booking, setBooking] = useState<Booking>({});
+  const [locationSelected, setLocationSelected] = useState(false);
 
   const setBookingLocation = (location: Location) => {
     setBooking((prev) => ({ ...prev, location }));
+    setLocationSelected(true);
   };
 
   const setBookingDate = (date: Date) => {
@@ -156,6 +159,7 @@ export const BookingProvider: React.FC<{ children: ReactNode }> = ({
 
   const resetBooking = () => {
     setBooking({});
+    setLocationSelected(false);
   };
 
   return (
@@ -165,6 +169,7 @@ export const BookingProvider: React.FC<{ children: ReactNode }> = ({
         locations: sampleLocations,
         timeSlots: sampleTimeSlots,
         courts: sampleCourts,
+        locationSelected,
         setBookingLocation,
         setBookingDate,
         setBookingTimeSlot,
