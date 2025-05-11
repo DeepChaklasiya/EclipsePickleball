@@ -39,7 +39,11 @@ const AuthModal = ({ isOpen, onClose }: AuthModalProps) => {
         fetch(data.user_json_url)
           .then((response) => response.json())
           .then((userData) => {
-            toast.success("Phone verification successful!");
+            toast.success("Phone verification successful!", {
+              position: "top-center",
+              duration: 3000,
+              className: "mt-16" // Add margin to push toast down below navbar
+            });
 
             // Store user data using our auth utility
             setUser({

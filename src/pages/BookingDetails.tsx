@@ -33,6 +33,7 @@ import { getUser } from "@/lib/auth";
 import { createBooking } from "@/lib/api";
 import { toast } from "sonner";
 import { formatTimeRangeIST } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 
 const formSchema = z.object({
   name: z.string().min(2, { message: "Name must be at least 2 characters" }),
@@ -50,6 +51,7 @@ const BookingDetailsPage = () => {
   const [couponCode, setCouponCode] = useState("");
   const [userName, setUserName] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [buttonHighlighted, setButtonHighlighted] = useState(false);
 
   // Get user from local storage
   useEffect(() => {
@@ -121,6 +123,10 @@ const BookingDetailsPage = () => {
       players: 4,
     };
 
+    // Briefly flash button animation
+    setButtonHighlighted(true);
+    setTimeout(() => setButtonHighlighted(false), 1000);
+
     setBookingDetails(details);
     navigate("/booking-confirmation");
   };
@@ -128,8 +134,16 @@ const BookingDetailsPage = () => {
   // Format court display name
   const getCourtDisplayName = () => {
     if (!booking.court) return "";
-    return `OUTDOOR | ${8 - Number(booking.court.id)}`;
+    return `OUTDOOR | ${booking.court.id}`;
   };
+
+  // Add effect to show button animation on first load
+  useEffect(() => {
+    if (booking.court) {
+      setButtonHighlighted(true);
+      setTimeout(() => setButtonHighlighted(false), 1000);
+    }
+  }, []);
 
   return (
     <div className="page-container bg-[#f2e8dc]">
@@ -371,9 +385,29 @@ const BookingDetailsPage = () => {
           onClick={handlePayAtCourt}
           variant="cosmic"
           size="cosmic"
-          className="w-[90%] max-w-xs"
+          className={cn(
+            "w-[90%] max-w-xs relative group",
+            buttonHighlighted && "animate-pulse shadow-lg"
+          )}
         >
-          <span>PAY AT COURT</span>
+          <span className="flex items-center justify-center">
+            PAY AT COURT
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className={cn(
+                "h-5 w-5 ml-2 transition-transform group-hover:translate-x-1",
+                buttonHighlighted && "animate-bounce"
+              )}
+              viewBox="0 0 20 20"
+              fill="currentColor"
+            >
+              <path
+                fillRule="evenodd"
+                d="M10.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L12.586 11H5a1 1 0 110-2h7.586l-2.293-2.293a1 1 0 010-1.414z"
+                clipRule="evenodd"
+              />
+            </svg>
+          </span>
         </Button>
       </div>
     </div>

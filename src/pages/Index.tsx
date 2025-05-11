@@ -17,6 +17,7 @@ const Index = () => {
     }>
   >([]);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [animateButton, setAnimateButton] = useState(false);
   const navigate = useNavigate();
 
   // Generate stars with random positions for the cosmic background
@@ -31,6 +32,16 @@ const Index = () => {
     }));
     setStars(newStars);
   }, [starCount]);
+
+  // Add button animation after a short delay when the page loads
+  useEffect(() => {
+    // Short delay before starting the animation
+    const timer = setTimeout(() => {
+      setAnimateButton(true);
+    }, 1000);
+
+    return () => clearTimeout(timer);
+  }, []);
 
   const handleBookCourtClick = () => {
     if (isAuthenticated()) {
@@ -86,7 +97,7 @@ const Index = () => {
 
           <h1 className="text-2xl sm:text-3xl font-light tracking-wider mb-4 text-white">
             <span className="bg-gradient-to-r from-pink-400 to-amber-300 bg-clip-text text-transparent">
-              Serving under the shadow—pickleball eclipse style
+              Pickleball just went Interstellar!!
             </span>{" "}
             {/* <span className="font-light tracking-wider">PICKLEBALL</span> */}
           </h1>
@@ -104,14 +115,25 @@ const Index = () => {
       </div>
 
       <div className="sticky-button-container w-full max-w-xs mx-auto">
-        <Button
-          onClick={handleBookCourtClick}
-          variant="cosmic"
-          size="cosmic"
-          className="w-full"
-        >
-          <span>BOOK A COURT</span>
-        </Button>
+        <div className={`relative ${animateButton ? 'animate-ring-outer' : ''}`}>
+          {/* Outer glow ring */}
+          {animateButton && (
+            <div className="absolute inset-0 rounded-xl animate-ping-slow bg-gradient-to-r from-pink-400 to-amber-300 opacity-50"></div>
+          )}
+          <Button
+            onClick={handleBookCourtClick}
+            variant="cosmic"
+            size="cosmic"
+            className={`w-full font-semibold relative group ${animateButton ? 'animate-attention-pulse' : ''}`}
+          >
+            <span className={`flex items-center justify-center ${animateButton ? 'animate-glow-text' : ''}`}>
+              BOOK A COURT 
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 ml-2 transition-transform group-hover:translate-x-1" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M10.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L12.586 11H5a1 1 0 110-2h7.586l-2.293-2.293a1 1 0 010-1.414z" clipRule="evenodd" />
+              </svg>
+            </span>
+          </Button>
+        </div>
       </div>
 
       <AuthModal

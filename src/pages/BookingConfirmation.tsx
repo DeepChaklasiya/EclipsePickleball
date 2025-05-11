@@ -88,7 +88,7 @@ const BookingConfirmation = () => {
         const bookingData = {
           phoneNumber: user.phoneNumber,
           name: user.name,
-          courtNumber: String(`${8 - Number(booking.court.id)}`),
+          courtNumber: booking.court.id,
           date: booking.date!.toISOString(),
           startTime,
           endTime,
@@ -238,9 +238,7 @@ const BookingConfirmation = () => {
             <div className="grid grid-cols-2 gap-2 text-center mb-4 md:mb-6 w-full">
               <div className="flex flex-col items-center">
                 <span className="text-xs uppercase">COURT</span>
-                <span className="font-bold text-lg">
-                  {8 - Number(booking.court.id)}
-                </span>
+                <span className="font-bold text-lg">{booking.court.id}</span>
               </div>
               <div className="flex flex-col items-center">
                 <span className="text-xs uppercase">LOCATION</span>
@@ -283,7 +281,7 @@ const BookingConfirmation = () => {
 
             <p className="text-[10px] text-center max-w-[200px] text-gray-600">
               May cause extreme fun, sore muscles, and an addiction to saying
-              "DINK!"
+              "ECLIPSE!"
             </p>
 
             {/* Pickleball racket element - hidden on small screens */}
@@ -344,6 +342,24 @@ const BookingConfirmation = () => {
           >
             ROUTE ME <ArrowRight className="ml-1 w-4 h-4" />
           </Button>
+        </div>
+
+        <div className="text-center mt-6 text-xs text-gray-500">
+          <p>
+            © {new Date().getFullYear()} Eclipse Pickleball. All rights
+            reserved.
+          </p>
+          <p className="mt-1">
+            Developed by{" "}
+            <a
+              href="https://imhoteph.com/#home"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-600 hover:underline"
+            >
+              imhoteph.com
+            </a>
+          </p>
         </div>
       </div>
 
