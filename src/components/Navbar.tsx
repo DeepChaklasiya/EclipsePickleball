@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { User, LogOut } from "lucide-react";
+import { User, LogOut, Shield } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { isAuthenticated, logout, getUser } from "@/lib/auth";
@@ -172,6 +172,10 @@ const Navbar = ({ variant = "default" }: NavbarProps) => {
                   <DropdownMenuItem onClick={handleProfileClick}>
                     <User className="mr-2 h-4 w-4" />
                     <span>Profile</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => navigate("/admin")}>
+                    <Shield className="mr-2 h-4 w-4" />
+                    <span>Admin Dashboard</span>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={handleSignOut}>
