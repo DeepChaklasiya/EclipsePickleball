@@ -281,7 +281,7 @@ const BookingConfirmation = () => {
 
             <p className="text-[10px] text-center max-w-[200px] text-gray-600">
               May cause extreme fun, sore muscles, and an addiction to saying
-              "DINK!"
+              "ECLIPSE!"
             </p>
 
             {/* Pickleball racket element - hidden on small screens */}
