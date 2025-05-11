@@ -343,6 +343,24 @@ const BookingConfirmation = () => {
             ROUTE ME <ArrowRight className="ml-1 w-4 h-4" />
           </Button>
         </div>
+
+        <div className="text-center mt-6 text-xs text-gray-500">
+          <p>
+            © {new Date().getFullYear()} Eclipse Pickleball. All rights
+            reserved.
+          </p>
+          <p className="mt-1">
+            Developed by{" "}
+            <a
+              href="https://imhoteph.com/#home"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-600 hover:underline"
+            >
+              imhoteph.com
+            </a>
+          </p>
+        </div>
       </div>
 
       <div className="sticky-button-container flex items-center justify-center">
