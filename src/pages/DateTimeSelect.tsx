@@ -65,7 +65,7 @@ const DateTimeSelect = () => {
 
   const handleTimeSlotSelect = (timeSlot: TimeSlot) => {
     setSelectedTimeSlot(timeSlot);
-    
+
     // If date is already selected, trigger the highlight animation
     if (selectedDate) {
       setButtonHighlighted(true);
@@ -120,63 +120,57 @@ const DateTimeSelect = () => {
 
   return (
     <div className="page-container bg-black text-white min-h-screen flex flex-col">
-      <div className="flex-grow overflow-y-auto pb-20">
-        <Header showBackButton title="DATE & TIME" />
-        <BookingSteps />
+      {/* Fixed header section */}
+      <div className="fixed top-14 left-0 right-0 z-10 bg-black pt-6 pb-2">
+        <div className="container mx-auto pl-2 pr-2">
+          <Header showBackButton title="DATE & TIME" />
+          <BookingSteps />
 
-        {/* <div className="mb-8 mt-12">
-          <div className="flex justify-between items-center">
-            <h2 className="text-4xl font-light tracking-wider">
-              WHEN WOULD <br />
-              <span className="font-light">YOU LIKE TO PLAY?</span>
-            </h2>
-            <div className="text-xl font-light tracking-wider">
-              <span className="bg-gradient-to-r from-pink-400 to-amber-300 bg-clip-text text-transparent">02</span>/03
+          {/* Fixed Date Selection */}
+          <div className="mb-6 overflow-x-auto py-2">
+            <div className="flex space-x-2 min-w-max pb-2">
+              {dates.map((date, index) => {
+                const isSelected =
+                  selectedDate &&
+                  format(selectedDate, "yyyy-MM-dd") ===
+                    format(date, "yyyy-MM-dd");
+
+                return (
+                  <div
+                    key={index}
+                    onClick={() => handleDateSelect(date)}
+                    className={`cursor-pointer rounded-lg p-3 min-w-[4.5rem] text-center transition-all duration-300 transform hover:scale-105 ${
+                      isSelected
+                        ? "bg-[#3A2922] shadow-[0_0_15px_rgba(255,165,0,0.5)]"
+                        : "bg-white hover:shadow-[0_0_10px_rgba(0,200,255,0.3)]"
+                    }`}
+                  >
+                    <div
+                      className={`text-[10px] uppercase font-light tracking-wider ${
+                        isSelected ? "text-white" : "text-black"
+                      }`}
+                    >
+                      {format(date, "EEE")}
+                    </div>
+                    <div
+                      className={`text-2xl font-light ${
+                        isSelected ? "text-white" : "text-black"
+                      }`}
+                    >
+                      {format(date, "dd")}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
-        </div> */}
-
-        {/* Date Selection */}
-        <div className="mb-12 overflow-x-auto">
-          <div className="flex space-x-2 min-w-max pb-2">
-            {dates.map((date, index) => {
-              const isSelected =
-                selectedDate &&
-                format(selectedDate, "yyyy-MM-dd") ===
-                  format(date, "yyyy-MM-dd");
-
-              return (
-                <div
-                  key={index}
-                  onClick={() => handleDateSelect(date)}
-                  className={`cursor-pointer rounded-lg p-3 min-w-[4.5rem] text-center transition-all duration-300 transform hover:scale-105 ${
-                    isSelected
-                      ? "bg-[#3A2922] shadow-[0_0_15px_rgba(255,165,0,0.5)]"
-                      : "bg-white hover:shadow-[0_0_10px_rgba(0,200,255,0.3)]"
-                  }`}
-                >
-                  <div
-                    className={`text-[10px] uppercase font-light tracking-wider ${
-                      isSelected ? "text-white" : "text-black"
-                    }`}
-                  >
-                    {format(date, "EEE")}
-                  </div>
-                  <div
-                    className={`text-2xl font-light ${
-                      isSelected ? "text-white" : "text-black"
-                    }`}
-                  >
-                    {format(date, "dd")}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
         </div>
+      </div>
 
+      {/* Scrollable content area */}
+      <div className="flex-grow overflow-y-auto pb-20 mt-[230px]">
         {/* Time Slots */}
-        <div className="space-y-8">
+        <div className="space-y-8 container mx-auto pl-2 pr-2">
           {/* Morning */}
           <div className="bg-green-100 rounded-lg p-5 transition-all duration-300 shadow-[0_0_15px_rgba(0,255,128,0.1)] hover:shadow-[0_0_20px_rgba(0,255,128,0.2)]">
             <div className="flex justify-between items-center mb-4">
@@ -299,17 +293,26 @@ const DateTimeSelect = () => {
           size="cosmic"
           className={cn(
             "w-full relative group",
-            !selectionComplete && "opacity-75 cursor-not-allowed", 
+            !selectionComplete && "opacity-75 cursor-not-allowed",
             selectionComplete && buttonHighlighted && "animate-pulse shadow-lg"
           )}
         >
           <span className="flex items-center justify-center">
             CONTINUE
-            <svg xmlns="http://www.w3.org/2000/svg" className={cn(
-              "h-5 w-5 ml-2 transition-transform group-hover:translate-x-1",
-              selectionComplete && buttonHighlighted && "animate-bounce"
-            )} viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M10.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L12.586 11H5a1 1 0 110-2h7.586l-2.293-2.293a1 1 0 010-1.414z" clipRule="evenodd" />
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className={cn(
+                "h-5 w-5 ml-2 transition-transform group-hover:translate-x-1",
+                selectionComplete && buttonHighlighted && "animate-bounce"
+              )}
+              viewBox="0 0 20 20"
+              fill="currentColor"
+            >
+              <path
+                fillRule="evenodd"
+                d="M10.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L12.586 11H5a1 1 0 110-2h7.586l-2.293-2.293a1 1 0 010-1.414z"
+                clipRule="evenodd"
+              />
             </svg>
           </span>
         </Button>

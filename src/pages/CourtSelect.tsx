@@ -465,9 +465,12 @@ const CourtSelect = () => {
   return (
     <div className="page-container">
       <div className="content-with-sticky-button">
-        <Header showBackButton title="Court Selection" />
-        <BookingSteps />
-
+        <div className="fixed top-14 left-0 right-0 z-10 bg-eclipse-dark pt-6 pb-2">
+          <div className="container pr-2 pl-2 mx-auto">
+            <Header showBackButton title="Court Selection" />
+            <BookingSteps />
+          </div>
+        </div>
         <div className="mb-8">
           <div className="text-sm font-medium bg-gradient-to-r from-pink-300 to-amber-200 bg-clip-text text-transparent mb-2">
             Current Selection
