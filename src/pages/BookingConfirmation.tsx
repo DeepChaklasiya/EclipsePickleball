@@ -88,7 +88,7 @@ const BookingConfirmation = () => {
         const bookingData = {
           phoneNumber: user.phoneNumber,
           name: user.name,
-          courtNumber: String(`${8 - Number(booking.court.id)}`),
+          courtNumber: booking.court.id,
           date: booking.date!.toISOString(),
           startTime,
           endTime,
@@ -238,9 +238,7 @@ const BookingConfirmation = () => {
             <div className="grid grid-cols-2 gap-2 text-center mb-4 md:mb-6 w-full">
               <div className="flex flex-col items-center">
                 <span className="text-xs uppercase">COURT</span>
-                <span className="font-bold text-lg">
-                  {8 - Number(booking.court.id)}
-                </span>
+                <span className="font-bold text-lg">{booking.court.id}</span>
               </div>
               <div className="flex flex-col items-center">
                 <span className="text-xs uppercase">LOCATION</span>

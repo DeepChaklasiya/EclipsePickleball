@@ -355,10 +355,7 @@ const CourtSelect = () => {
 
   // Check if a court is booked
   const isCourtBooked = (courtId: string): boolean => {
-    // Convert courtId to use the ID system in the backend
-    // In the frontend we use CourtId 1-7, but the backend might store them differently
-    const backendCourtId = String(8 - Number(courtId));
-    return bookedCourts.includes(backendCourtId);
+    return bookedCourts.includes(courtId);
   };
 
   const handleCourtSelect = (courtId: string) => {
@@ -369,7 +366,7 @@ const CourtSelect = () => {
       setSelectedCourtId(undefined);
     } else {
       setSelectedCourtId(courtId);
-      
+
       // Briefly flash the continue button when court is selected
       setButtonHighlighted(true);
       setTimeout(() => setButtonHighlighted(false), 1000);
@@ -673,7 +670,7 @@ const CourtSelect = () => {
                     <div className="absolute top-2/3 w-full h-1.5 bg-orange-700/70"></div>
                   </>
                 )}
-                
+
                 {/* Special features for Neptune */}
                 {bufferPlanet.name === "Neptune" && (
                   <>
@@ -722,11 +719,20 @@ const CourtSelect = () => {
           >
             <span className="flex items-center justify-center">
               CONTINUE
-              <svg xmlns="http://www.w3.org/2000/svg" className={cn(
-                "h-5 w-5 ml-2 transition-transform group-hover:translate-x-1",
-                selectedCourtId && buttonHighlighted && "animate-bounce"
-              )} viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M10.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L12.586 11H5a1 1 0 110-2h7.586l-2.293-2.293a1 1 0 010-1.414z" clipRule="evenodd" />
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className={cn(
+                  "h-5 w-5 ml-2 transition-transform group-hover:translate-x-1",
+                  selectedCourtId && buttonHighlighted && "animate-bounce"
+                )}
+                viewBox="0 0 20 20"
+                fill="currentColor"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M10.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L12.586 11H5a1 1 0 110-2h7.586l-2.293-2.293a1 1 0 010-1.414z"
+                  clipRule="evenodd"
+                />
               </svg>
             </span>
           </Button>
