@@ -158,7 +158,7 @@ const BookingCard = ({ booking, isPast = false }: BookingCardProps) => {
         booking.timeSlot.endTime
       );
     } else {
-      return "Time not specified";
+      return "Midnight Slot (12 AM - 1 AM)";
     }
   };
 
@@ -203,7 +203,7 @@ const BookingCard = ({ booking, isPast = false }: BookingCardProps) => {
           </div>
 
           <div className="text-lg font-bold text-amber-300">
-            ₹{booking.totalPrice || 800}
+            ₹{booking.totalAmount}
           </div>
 
           <div className="text-xs text-gray-400">

@@ -215,12 +215,21 @@ const CourtSelect = () => {
           endTime: booking.timeSlot.endTime,
           section: booking.timeSlot.section,
           formattedTimeSlotId: timeSlotId,
+          isSpecialEclipseSlot: booking.timeSlot.isSpecialEclipseSlot,
         });
+
+        // Check if this is the special Eclipse slot
+        const isEclipseSlot =
+          booking.timeSlot.isSpecialEclipseSlot ||
+          booking.timeSlot.id === "eclipse" ||
+          booking.timeSlot.startTime === "Eclipse" ||
+          booking.timeSlot.startTime === "Midnight";
 
         // Fetch booked courts
         const bookedCourtsList = await getBookedCourts(
           booking.date.toISOString(),
-          timeSlotId
+          timeSlotId,
+          isEclipseSlot
         );
         setBookedCourts(bookedCourtsList);
         setAvailabilityError(null);

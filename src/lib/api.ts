@@ -28,18 +28,50 @@ export interface BookingData {
     _id: string;
     startTime: string;
     endTime: string;
+    isSpecialEclipseSlot?: boolean;
   };
   startTime?: string;
   endTime?: string;
   status: string;
   numberOfPlayers: number;
   totalPrice: number;
+  totalAmount?: number;
   paymentStatus: string;
   notes?: string;
   bookingCode: string;
   createdAt: string;
   updatedAt: string;
 }
+
+// Add this helper function at the top of the file, after the imports
+const determinePrice = (timeString: string): number => {
+  // Special cases for Eclipse/Midnight slot
+  if (timeString === "Midnight" || timeString === "Eclipse") {
+    return 900; // Use evening price for Midnight/Eclipse
+  }
+
+  // Extract hours from time string (assuming format like "2:00 PM" or "14:00")
+  let hours = 0;
+  if (timeString.includes(":")) {
+    if (timeString.includes("PM") && !timeString.includes("12:")) {
+      // PM times (except 12 PM)
+      hours = parseInt(timeString.split(":")[0]) + 12;
+    } else if (timeString.includes("AM") && timeString.includes("12:")) {
+      // 12 AM special case
+      hours = 0;
+    } else {
+      // All other times - just parse the hours
+      hours = parseInt(timeString.split(":")[0]);
+    }
+  }
+
+  // Evening: 5 PM (17:00) onwards - ₹900
+  if (hours >= 17) {
+    return 900;
+  }
+  // Morning and Afternoon - ₹600
+  return 600;
+};
 
 // Create a booking
 export const createBooking = async (
@@ -49,46 +81,36 @@ export const createBooking = async (
   date: string | Date,
   timeSlotString: string,
   numberOfPlayers: number = 4,
-  notes: string = ""
+  notes: string = "",
+  totalAmount: number | null = null,
+  isEclipseSlot: boolean = false
 ): Promise<any> => {
   try {
-    // Format date to ISO string
-    const formattedDate = new Date(date).toISOString();
+    console.log("Creating booking with details:", {
+      phoneNumber,
+      name,
+      courtNumber,
+      date,
+      timeSlotString,
+      numberOfPlayers,
+      notes,
+      totalAmount,
+      isEclipseSlot,
+    });
 
-    // Extract start and end times from timeSlotId
-    let startTime = "08:00";
-    let endTime = "09:00";
+    // For Eclipse slots, use "Midnight" directly
+    let startTime: string, endTime: string;
 
-    if (timeSlotString.includes("-")) {
-      const [start, end] = timeSlotString.split("-");
-      startTime = start.trim();
-      endTime = end.trim();
+    if (isEclipseSlot) {
+      startTime = "Midnight";
+      endTime = "";
+    } else {
+      // For regular slots, split the timeSlotString
+      startTime = timeSlotString.split("-")[0].trim();
+      endTime = timeSlotString.includes("-")
+        ? timeSlotString.split("-")[1].trim()
+        : "";
     }
-
-    // Format times to include AM/PM in IST
-    const formatTimeToIST = (timeString: string) => {
-      // If already has AM/PM, return as is
-      if (timeString.includes("AM") || timeString.includes("PM")) {
-        return timeString;
-      }
-
-      // Extract hours from time (assuming 24-hour format like "14:00")
-      let [hours, minutes] = timeString.split(":");
-      const hoursNum = parseInt(hours);
-
-      // Convert to 12-hour format with AM/PM
-      const period = hoursNum >= 12 ? "PM" : "AM";
-      const hours12 = hoursNum % 12 || 12; // Convert 0 to 12 for 12 AM
-
-      return `${hours12}:${minutes} ${period}`;
-    };
-
-    const formattedStartTime = formatTimeToIST(startTime);
-    const formattedEndTime = formatTimeToIST(endTime);
-
-    console.log(
-      `Creating booking with IST times: ${formattedStartTime} to ${formattedEndTime}`
-    );
 
     const response = await fetch(`${API_URL}/bookings`, {
       method: "POST",
@@ -99,11 +121,13 @@ export const createBooking = async (
         phoneNumber,
         name,
         courtNumber,
-        date: formattedDate,
-        startTime: formattedStartTime,
-        endTime: formattedEndTime,
+        date,
+        startTime,
+        endTime,
         numberOfPlayers,
         notes,
+        totalAmount,
+        isEclipseSlot,
       }),
     });
 
@@ -156,9 +180,20 @@ export const getUserBookings = async (
         };
       }
 
+      // Check if this is the special Eclipse slot
+      const isEclipseSlot =
+        booking.timeSlot.isSpecialEclipseSlot ||
+        booking.timeSlot.startTime === "Eclipse" ||
+        booking.timeSlot.startTime === "Midnight";
+
       return {
         ...booking,
-        totalPrice: booking.totalPrice || 800,
+        totalPrice:
+          booking.totalPrice || determinePrice(booking.startTime || ""),
+        totalAmount:
+          booking.totalAmount ||
+          booking.totalPrice ||
+          determinePrice(booking.startTime || ""),
       };
     });
   } catch (error) {
@@ -190,7 +225,8 @@ export const getBookingById = async (
 // Get booked courts for a specific date and time slot
 export const getBookedCourts = async (
   date: string,
-  timeSlotId: string
+  timeSlotId: string,
+  isSpecialEclipseSlot: boolean = false
 ): Promise<string[]> => {
   try {
     // Handle potentially invalid date
@@ -207,18 +243,21 @@ export const getBookedCourts = async (
     const encodedTimeSlotId = encodeURIComponent(timeSlotId);
 
     console.log(
-      `Requesting availability with date=${formattedDate} and timeSlotId=${encodedTimeSlotId}`
+      `Requesting availability with date=${formattedDate} and timeSlotId=${encodedTimeSlotId}, isSpecialEclipseSlot=${isSpecialEclipseSlot}`
     );
 
     // Add a timeout to the fetch to prevent long-hanging requests
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
 
+    // Build the URL with the eclipse parameter if needed
+    let url = `${API_URL}/bookings/availability?date=${formattedDate}&timeSlotId=${encodedTimeSlotId}`;
+    if (isSpecialEclipseSlot) {
+      url += "&isSpecialEclipseSlot=true";
+    }
+
     try {
-      const response = await fetch(
-        `${API_URL}/bookings/availability?date=${formattedDate}&timeSlotId=${encodedTimeSlotId}`,
-        { signal: controller.signal }
-      );
+      const response = await fetch(url, { signal: controller.signal });
 
       clearTimeout(timeoutId);
 

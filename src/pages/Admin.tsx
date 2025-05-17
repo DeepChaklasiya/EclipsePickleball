@@ -1,27 +1,59 @@
 import { useState, useEffect } from "react";
-import { format, isValid, parseISO } from "date-fns";
-import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
+import {
+  Shield,
+  User,
+  Calendar,
+  XCircle,
+  Menu,
+  Search,
+  X,
+  Filter,
+  ChevronDown,
+} from "lucide-react";
 import axios from "axios";
-import { API_URL } from "@/lib/env";
+import { toast } from "sonner";
 
+// UI Components
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Table,
   TableBody,
-  TableCaption,
   TableCell,
   TableHead,
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Select,
   SelectContent,
@@ -29,712 +61,776 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
-import {
-  CalendarIcon,
-  Download,
-  RefreshCcw,
-  Search,
-  X,
-  Lock,
-  AlertCircle,
-} from "lucide-react";
-import { Separator } from "@/components/ui/separator";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 
-// Define booking type based on the backend model
-interface Booking {
-  _id: string;
-  name: string;
-  phoneNumber: string;
-  courtNumber: number;
-  date: string;
-  startTime: string;
-  endTime: string;
-  numberOfPlayers: number;
-  notes?: string;
-  status: "confirmed" | "cancelled";
-  createdAt: string;
-  updatedAt: string;
-}
-
-const ADMIN_PASSWORD = "8140552219";
+const API_URL =
+  import.meta.env.VITE_API_URL ||
+  "https://eclipse-backend-4pp3.onrender.com/api";
 
 const Admin = () => {
   const navigate = useNavigate();
-  const [startDate, setStartDate] = useState<Date | undefined>(undefined);
-  const [endDate, setEndDate] = useState<Date | undefined>(undefined);
-  const [courtFilter, setCourtFilter] = useState<string>("all");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [searchQuery, setSearchQuery] = useState<string>("");
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
-  const [showPasswordDialog, setShowPasswordDialog] = useState<boolean>(true);
-  const [passwordError, setPasswordError] = useState<string>("");
 
-  // Check for existing authentication on component mount
+  // Authentication state
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [password, setPassword] = useState("");
+  const [isAuthenticating, setIsAuthenticating] = useState(false);
+  const [showAuthDialog, setShowAuthDialog] = useState(true);
+
+  // Admin data
+  const [bookings, setBookings] = useState([]);
+  const [filteredBookings, setFilteredBookings] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState("bookings");
+
+  // Filter state
+  const [nameFilter, setNameFilter] = useState("");
+  const [phoneFilter, setPhoneFilter] = useState("");
+  const [dateFilter, setDateFilter] = useState("");
+  const [courtFilter, setCourtFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+  const [showFilters, setShowFilters] = useState(false);
+
+  // Delete booking state
+  const [bookingToDelete, setBookingToDelete] = useState(null);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  // Check if admin is already authenticated
   useEffect(() => {
-    const savedAuth = sessionStorage.getItem("adminAuthenticated");
-    if (savedAuth === "true") {
+    const adminAuth = localStorage.getItem("adminAuth");
+    if (adminAuth === "true") {
       setIsAuthenticated(true);
-      setShowPasswordDialog(false);
+      setShowAuthDialog(false);
+      fetchBookings();
     }
   }, []);
 
-  // Fetch all bookings with optional filters
-  const {
-    data: bookingsData,
-    isLoading,
-    isError,
-    refetch,
-  } = useQuery({
-    queryKey: ["admin-bookings", startDate, endDate, statusFilter, courtFilter],
-    queryFn: async () => {
-      const params = new URLSearchParams();
+  // Apply filters to bookings
+  useEffect(() => {
+    if (bookings.length > 0) {
+      let results = [...bookings];
 
-      if (startDate) {
-        params.append("startDate", startDate.toISOString());
+      // Apply name filter
+      if (nameFilter) {
+        results = results.filter((booking) =>
+          booking.name.toLowerCase().includes(nameFilter.toLowerCase())
+        );
       }
 
-      if (endDate) {
-        params.append("endDate", endDate.toISOString());
+      // Apply phone filter
+      if (phoneFilter) {
+        results = results.filter((booking) =>
+          booking.phoneNumber.includes(phoneFilter)
+        );
       }
 
-      if (statusFilter && statusFilter !== "all") {
-        params.append("status", statusFilter);
+      // Apply date filter
+      if (dateFilter) {
+        results = results.filter((booking) => {
+          const bookingDate = new Date(booking.date).toLocaleDateString();
+          return bookingDate.includes(dateFilter);
+        });
       }
 
+      // Apply court filter
       if (courtFilter && courtFilter !== "all") {
-        params.append("courtNumber", courtFilter);
+        results = results.filter(
+          (booking) => booking.courtNumber.toString() === courtFilter
+        );
       }
 
-      const response = await axios.get(`${API_URL}/bookings`, { params });
-      return response.data;
-    },
-    enabled: isAuthenticated, // Only run query if authenticated
-  });
+      // Apply status filter
+      if (statusFilter && statusFilter !== "all") {
+        results = results.filter((booking) => booking.status === statusFilter);
+      }
 
-  // Format date for display
-  const formatDate = (dateString: string) => {
+      setFilteredBookings(results);
+    } else {
+      setFilteredBookings([]);
+    }
+  }, [
+    bookings,
+    nameFilter,
+    phoneFilter,
+    dateFilter,
+    courtFilter,
+    statusFilter,
+  ]);
+
+  // Fetch bookings data
+  const fetchBookings = async () => {
     try {
-      const date = parseISO(dateString);
-      return isValid(date) ? format(date, "MMM dd, yyyy") : "Invalid date";
+      setLoading(true);
+      const response = await axios.get(`${API_URL}/bookings`);
+
+      if (response.data.status === "success") {
+        setBookings(response.data.data.bookings);
+        setFilteredBookings(response.data.data.bookings);
+      } else {
+        toast.error("Failed to fetch bookings");
+      }
     } catch (error) {
-      return "Invalid date";
+      console.error("Error fetching bookings:", error);
+      toast.error("Error fetching bookings data");
+    } finally {
+      setLoading(false);
     }
   };
 
-  // Filter bookings by search query on name or phone number
-  const filteredBookings =
-    bookingsData?.data?.bookings.filter((booking: Booking) => {
-      if (!searchQuery) return true;
-
-      const query = searchQuery.toLowerCase();
-      return (
-        booking.name.toLowerCase().includes(query) ||
-        booking.phoneNumber.includes(query)
-      );
-    }) || [];
-
-  // Calculate stats
-  const totalBookings = bookingsData?.data?.bookings?.length || 0;
-  const confirmedBookings =
-    bookingsData?.data?.bookings?.filter(
-      (b: Booking) => b.status === "confirmed"
-    ).length || 0;
-  const cancelledBookings =
-    bookingsData?.data?.bookings?.filter(
-      (b: Booking) => b.status === "cancelled"
-    ).length || 0;
-
-  // Group bookings by court
-  const bookingsByCourt =
-    bookingsData?.data?.bookings?.reduce(
-      (acc: Record<string, number>, booking: Booking) => {
-        const courtKey = `Court ${booking.courtNumber}`;
-        acc[courtKey] = (acc[courtKey] || 0) + 1;
-        return acc;
-      },
-      {} as Record<string, number>
-    ) || ({} as Record<string, number>);
-
-  // Reset all filters
-  const resetFilters = () => {
-    setStartDate(undefined);
-    setEndDate(undefined);
-    setCourtFilter("all");
-    setStatusFilter("all");
-    setSearchQuery("");
+  // Clear all filters
+  const clearFilters = () => {
+    setNameFilter("");
+    setPhoneFilter("");
+    setDateFilter("");
+    setCourtFilter("");
+    setStatusFilter("");
   };
 
-  // Export bookings as CSV
-  const exportCSV = () => {
-    if (!filteredBookings.length) return;
+  // Handle admin authentication
+  const handleAuthenticate = async () => {
+    if (!password) {
+      toast.error("Please enter the admin password");
+      return;
+    }
 
-    const headers = [
-      "Name",
-      "Phone",
-      "Court",
-      "Date",
-      "Start Time",
-      "End Time",
-      "Players",
-      "Status",
-      "Notes",
-    ];
+    try {
+      setIsAuthenticating(true);
+      const response = await axios.post(`${API_URL}/auth/verify-admin`, {
+        password,
+      });
 
-    const csvRows = [
-      headers.join(","),
-      ...filteredBookings.map((booking: Booking) => {
-        const row = [
-          `"${booking.name}"`,
-          `"${booking.phoneNumber}"`,
-          booking.courtNumber,
-          formatDate(booking.date),
-          booking.startTime,
-          booking.endTime,
-          booking.numberOfPlayers,
-          booking.status,
-          `"${booking.notes || ""}"`,
-        ];
-        return row.join(",");
-      }),
-    ];
-
-    const csvString = csvRows.join("\n");
-    const blob = new Blob([csvString], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    const timestamp = format(new Date(), "yyyy-MM-dd");
-
-    link.setAttribute("href", url);
-    link.setAttribute("download", `bookings-${timestamp}.csv`);
-    link.click();
-  };
-
-  // Password dialog component as a separate function
-  const PasswordDialog = () => {
-    // Use a local state for the input to avoid potential issues
-    const [localPassword, setLocalPassword] = useState("");
-
-    const handleSubmit = () => {
-      if (localPassword === ADMIN_PASSWORD) {
+      if (response.data.status === "success") {
         setIsAuthenticated(true);
-        setShowPasswordDialog(false);
-        setPasswordError("");
-        // Save authentication to session storage
-        sessionStorage.setItem("adminAuthenticated", "true");
-      } else {
-        setPasswordError("Incorrect password. Please try again.");
-        setLocalPassword(""); // Clear password field on error
+        localStorage.setItem("adminAuth", "true");
+        setShowAuthDialog(false);
+        fetchBookings();
+        toast.success("Admin authentication successful");
       }
-    };
+    } catch (error) {
+      console.error("Authentication error:", error);
+      toast.error("Invalid admin password");
+    } finally {
+      setIsAuthenticating(false);
+    }
+  };
 
-    const handleOpenChange = (open: boolean) => {
-      if (!open) {
-        // If dialog is closing and user is not authenticated, redirect to home
-        if (!isAuthenticated) {
-          navigate("/");
-        } else {
-          setShowPasswordDialog(false);
-        }
-      } else {
-        setShowPasswordDialog(true);
-      }
-    };
+  // Handle logout
+  const handleLogout = () => {
+    setIsAuthenticated(false);
+    localStorage.removeItem("adminAuth");
+    navigate("/");
+    toast.success("Logged out from admin panel");
+  };
 
-    return (
-      <Dialog open={showPasswordDialog} onOpenChange={handleOpenChange}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Lock className="h-5 w-5" /> Admin Authentication Required
-            </DialogTitle>
-            <DialogDescription>
-              Please enter the admin password to access this page.
-            </DialogDescription>
-          </DialogHeader>
+  // Handle booking deletion
+  const confirmDeleteBooking = (booking) => {
+    setBookingToDelete(booking);
+    setShowDeleteDialog(true);
+  };
 
-          {passwordError && (
-            <Alert variant="destructive" className="my-2">
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>{passwordError}</AlertDescription>
-            </Alert>
-          )}
+  const handleDeleteBooking = async () => {
+    if (!bookingToDelete) return;
 
-          <div className="flex flex-col space-y-4 py-2">
-            <Input
-              type="password"
-              placeholder="Enter password"
-              value={localPassword}
-              onChange={(e) => setLocalPassword(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") handleSubmit();
-              }}
-              className="w-full"
-              autoFocus
-            />
+    try {
+      setIsDeleting(true);
+      await axios.delete(`${API_URL}/bookings/${bookingToDelete._id}`);
 
-            <div className="flex gap-2">
-              <Button
-                type="button"
-                variant="default"
-                onClick={handleSubmit}
-                className="flex-1"
-              >
-                Submit
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => navigate("/")}
-                className="flex-1"
-              >
-                Cancel
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-    );
+      // Refetch bookings after deletion
+      await fetchBookings();
+
+      toast.success("Booking deleted successfully");
+      setShowDeleteDialog(false);
+    } catch (error) {
+      console.error("Error deleting booking:", error);
+      toast.error("Failed to delete booking");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  // Format date for display
+  const formatDate = (dateString) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString("en-US", {
+      weekday: "short",
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
   };
 
   return (
-    <>
-      <PasswordDialog />
+    <div className="container mx-auto py-6 px-3 sm:px-4 md:px-6 max-w-6xl bg-slate-950">
+      {/* Admin Authentication Dialog */}
+      <Dialog open={showAuthDialog} onOpenChange={setShowAuthDialog}>
+        <DialogContent className="sm:max-w-md bg-slate-900 border border-blue-600">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-xl text-white">
+              <Shield className="h-5 w-5 text-blue-400" />
+              Admin Authentication
+            </DialogTitle>
+            <DialogDescription className="text-slate-300">
+              Please enter the admin password to access the dashboard.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <Input
+              id="password"
+              type="password"
+              placeholder="Enter admin password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  handleAuthenticate();
+                }
+              }}
+              className="bg-slate-800 text-white border-slate-600 focus:border-blue-500"
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              onClick={handleAuthenticate}
+              disabled={isAuthenticating}
+              className="bg-blue-600 hover:bg-blue-700 text-white"
+            >
+              {isAuthenticating ? "Verifying..." : "Login"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
+      {/* Admin Dashboard */}
       {isAuthenticated && (
-        <div className="container mx-auto py-4 px-2 sm:px-4 sm:py-6 max-w-7xl">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sm:gap-0 mb-6">
-            <h1 className="text-2xl sm:text-3xl font-bold text-white">
-              Admin Dashboard
-            </h1>
-            <div className="flex gap-2 w-full sm:w-auto">
+        <>
+          <header className="mb-6">
+            <div className="flex justify-between items-center">
+              <h1 className="text-xl sm:text-2xl font-bold text-white flex items-center gap-2">
+                <Shield className="h-5 w-5 sm:h-6 sm:w-6 text-blue-400" />
+                Admin Dashboard
+              </h1>
               <Button
-                className="flex-1 sm:flex-auto"
                 variant="outline"
-                onClick={() => refetch()}
+                onClick={handleLogout}
+                className="border-blue-500 text-black-100 hover:bg-blue-900/50"
               >
-                <RefreshCcw className="h-4 w-4 mr-2" />
-                Refresh
-              </Button>
-              <Button
-                className="flex-1 sm:flex-auto"
-                variant="outline"
-                onClick={exportCSV}
-                disabled={!filteredBookings.length}
-              >
-                <Download className="h-4 w-4 mr-2" />
-                <span className="hidden sm:inline">Export CSV</span>
-                <span className="sm:hidden">Export</span>
+                Logout
               </Button>
             </div>
-          </div>
+            <Separator className="my-4 bg-blue-800/40" />
+          </header>
 
-          {/* Stats Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
-            <Card>
-              <CardHeader className="pb-2 px-4">
-                <CardTitle className="text-sm font-medium">
-                  Total Bookings
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="px-4 py-2">
-                <div className="text-2xl font-bold">{totalBookings}</div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="pb-2 px-4">
-                <CardTitle className="text-sm font-medium">
-                  Confirmed Bookings
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="px-4 py-2">
-                <div className="text-2xl font-bold text-green-500">
-                  {confirmedBookings}
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="pb-2 px-4">
-                <CardTitle className="text-sm font-medium">
-                  Cancelled Bookings
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="px-4 py-2">
-                <div className="text-2xl font-bold text-red-500">
-                  {cancelledBookings}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          <Tabs defaultValue="bookings" className="w-full">
-            <TabsList className="mb-6 w-full sm:w-auto flex">
-              <TabsTrigger value="bookings" className="flex-1 sm:flex-auto">
-                All Bookings
+          <Tabs
+            defaultValue={activeTab}
+            onValueChange={setActiveTab}
+            className="w-full"
+          >
+            <TabsList className="mb-6 w-full bg-slate-800 border border-blue-900">
+              <TabsTrigger
+                value="bookings"
+                className="flex-1 data-[state=active]:bg-blue-700 data-[state=active]:text-white"
+              >
+                <Calendar className="h-4 w-4 mr-2" />
+                Bookings
               </TabsTrigger>
-              <TabsTrigger value="analytics" className="flex-1 sm:flex-auto">
-                Analytics
+              <TabsTrigger
+                value="statistics"
+                className="flex-1 data-[state=active]:bg-blue-700 data-[state=active]:text-white"
+              >
+                <User className="h-4 w-4 mr-2" />
+                Statistics
               </TabsTrigger>
             </TabsList>
 
+            {/* Bookings Tab */}
             <TabsContent value="bookings">
-              {/* Filters */}
-              <Card className="mb-6">
-                <CardHeader>
-                  <CardTitle className="text-lg">Filters</CardTitle>
+              <Card className="bg-slate-900 border-blue-900 mb-6">
+                <CardHeader className="pb-2">
+                  <div className="flex justify-between items-center">
+                    <CardTitle className="text-lg sm:text-xl text-white">
+                      Filters
+                    </CardTitle>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowFilters(!showFilters)}
+                        className="border-blue-500 text-black-100 md:hidden"
+                      >
+                        <Filter className="h-4 w-4 mr-2" />
+                        {showFilters ? "Hide Filters" : "Show Filters"}
+                      </Button>
+                      {(nameFilter ||
+                        phoneFilter ||
+                        dateFilter ||
+                        courtFilter ||
+                        statusFilter) && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={clearFilters}
+                          className="text-blue-400 hover:text-blue-300"
+                        >
+                          <X className="h-4 w-4 mr-1" />
+                          Clear
+                        </Button>
+                      )}
+                    </div>
+                  </div>
                 </CardHeader>
-                <CardContent>
-                  <div className="flex flex-col gap-4 mb-4">
-                    <div className="w-full">
-                      <div className="mb-2 text-sm">
-                        Search by Name or Phone
-                      </div>
+                <CardContent
+                  className={`${showFilters ? "block" : "hidden"} md:block`}
+                >
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4">
+                    {/* Name Filter */}
+                    <div>
+                      <Label className="text-slate-300 text-sm mb-1 block">
+                        Name
+                      </Label>
                       <div className="relative">
-                        <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                        <Search className="absolute left-2 top-2.5 h-4 w-4 text-slate-400" />
                         <Input
-                          placeholder="Search..."
-                          className="pl-8"
-                          value={searchQuery}
-                          onChange={(e) => setSearchQuery(e.target.value)}
+                          placeholder="Filter by name"
+                          value={nameFilter}
+                          onChange={(e) => setNameFilter(e.target.value)}
+                          className="pl-8 bg-slate-800 text-white border-slate-600 focus:border-blue-500"
                         />
-                        {searchQuery && (
+                        {nameFilter && (
                           <X
-                            className="absolute right-2 top-2.5 h-4 w-4 text-muted-foreground cursor-pointer"
-                            onClick={() => setSearchQuery("")}
+                            className="absolute right-2 top-2.5 h-4 w-4 text-slate-400 cursor-pointer hover:text-white"
+                            onClick={() => setNameFilter("")}
                           />
                         )}
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div className="w-full">
-                        <div className="mb-2 text-sm">Start Date</div>
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <Button
-                              variant="outline"
-                              className="w-full justify-start text-left font-normal"
-                            >
-                              <CalendarIcon className="mr-2 h-4 w-4" />
-                              {startDate
-                                ? format(startDate, "PPP")
-                                : "Select date"}
-                            </Button>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0">
-                            <Calendar
-                              mode="single"
-                              selected={startDate}
-                              onSelect={setStartDate}
-                              initialFocus
-                            />
-                          </PopoverContent>
-                        </Popover>
-                      </div>
-
-                      <div className="w-full">
-                        <div className="mb-2 text-sm">End Date</div>
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <Button
-                              variant="outline"
-                              className="w-full justify-start text-left font-normal"
-                            >
-                              <CalendarIcon className="mr-2 h-4 w-4" />
-                              {endDate ? format(endDate, "PPP") : "Select date"}
-                            </Button>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0">
-                            <Calendar
-                              mode="single"
-                              selected={endDate}
-                              onSelect={setEndDate}
-                              initialFocus
-                            />
-                          </PopoverContent>
-                        </Popover>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <div className="mb-2 text-sm">Court</div>
-                        <Select
-                          value={courtFilter}
-                          onValueChange={setCourtFilter}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="All Courts" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="all">All Courts</SelectItem>
-                            {[1, 2, 3, 4, 5, 6, 7].map((num) => (
-                              <SelectItem key={num} value={num.toString()}>
-                                Court {num}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      <div>
-                        <div className="mb-2 text-sm">Status</div>
-                        <Select
-                          value={statusFilter}
-                          onValueChange={setStatusFilter}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="All Status" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="all">All Status</SelectItem>
-                            <SelectItem value="confirmed">Confirmed</SelectItem>
-                            <SelectItem value="cancelled">Cancelled</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex justify-end">
-                    <Button variant="outline" onClick={resetFilters}>
-                      Clear Filters
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Bookings Table */}
-              <Card>
-                <CardContent className="p-0">
-                  {isLoading ? (
-                    <div className="flex justify-center items-center h-64">
-                      <div className="text-center">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-                        <p className="mt-2">Loading bookings...</p>
-                      </div>
-                    </div>
-                  ) : isError ? (
-                    <div className="flex justify-center items-center h-64">
-                      <div className="text-center text-red-500">
-                        <p>Error loading bookings. Please try again.</p>
-                        <Button
-                          variant="outline"
-                          onClick={() => refetch()}
-                          className="mt-2"
-                        >
-                          Retry
-                        </Button>
-                      </div>
-                    </div>
-                  ) : filteredBookings.length === 0 ? (
-                    <div className="flex justify-center items-center h-64">
-                      <div className="text-center">
-                        <p>No bookings found matching the criteria.</p>
-                        {(startDate ||
-                          endDate ||
-                          courtFilter !== "all" ||
-                          statusFilter !== "all" ||
-                          searchQuery) && (
-                          <Button
-                            variant="outline"
-                            onClick={resetFilters}
-                            className="mt-2"
-                          >
-                            Clear Filters
-                          </Button>
+                    {/* Phone Filter */}
+                    <div>
+                      <Label className="text-slate-300 text-sm mb-1 block">
+                        Phone
+                      </Label>
+                      <div className="relative">
+                        <Search className="absolute left-2 top-2.5 h-4 w-4 text-slate-400" />
+                        <Input
+                          placeholder="Filter by phone"
+                          value={phoneFilter}
+                          onChange={(e) => setPhoneFilter(e.target.value)}
+                          className="pl-8 bg-slate-800 text-white border-slate-600 focus:border-blue-500"
+                        />
+                        {phoneFilter && (
+                          <X
+                            className="absolute right-2 top-2.5 h-4 w-4 text-slate-400 cursor-pointer hover:text-white"
+                            onClick={() => setPhoneFilter("")}
+                          />
                         )}
                       </div>
                     </div>
-                  ) : (
-                    <div className="overflow-x-auto">
-                      <Table>
-                        <TableCaption>
-                          Showing {filteredBookings.length} of {totalBookings}{" "}
-                          bookings
-                        </TableCaption>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead className="hidden sm:table-cell">
-                              Name
-                            </TableHead>
-                            <TableHead>Details</TableHead>
-                            <TableHead className="hidden md:table-cell">
-                              Court
-                            </TableHead>
-                            <TableHead className="hidden md:table-cell">
-                              Date
-                            </TableHead>
-                            <TableHead className="hidden sm:table-cell">
-                              Time
-                            </TableHead>
-                            <TableHead className="hidden lg:table-cell">
-                              Players
-                            </TableHead>
-                            <TableHead>Status</TableHead>
-                            <TableHead className="hidden lg:table-cell">
-                              Notes
-                            </TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {filteredBookings.map((booking: Booking) => (
-                            <TableRow key={booking._id}>
-                              <TableCell className="hidden sm:table-cell font-medium">
-                                {booking.name}
-                              </TableCell>
-                              <TableCell>
-                                <div className="sm:hidden font-medium mb-1">
-                                  {booking.name}
-                                </div>
-                                <div className="sm:hidden">
-                                  {booking.phoneNumber}
-                                </div>
-                                <div className="md:hidden">
-                                  Court {booking.courtNumber}
-                                </div>
-                                <div className="md:hidden">
-                                  {formatDate(booking.date)}
-                                </div>
-                                <div className="sm:hidden">
-                                  {booking.startTime} - {booking.endTime}
-                                </div>
-                                <div className="lg:hidden sm:hidden">
-                                  Players: {booking.numberOfPlayers}
-                                </div>
-                              </TableCell>
-                              <TableCell className="hidden md:table-cell">
-                                Court {booking.courtNumber}
-                              </TableCell>
-                              <TableCell className="hidden md:table-cell">
-                                {formatDate(booking.date)}
-                              </TableCell>
-                              <TableCell className="hidden sm:table-cell">
-                                {booking.startTime} - {booking.endTime}
-                              </TableCell>
-                              <TableCell className="hidden lg:table-cell">
-                                {booking.numberOfPlayers}
-                              </TableCell>
-                              <TableCell>
-                                <Badge
-                                  variant={
-                                    booking.status === "confirmed"
-                                      ? "default"
-                                      : "destructive"
-                                  }
-                                >
-                                  {booking.status}
-                                </Badge>
-                              </TableCell>
-                              <TableCell className="hidden lg:table-cell max-w-[200px] truncate">
-                                {booking.notes || "-"}
-                              </TableCell>
-                            </TableRow>
+
+                    {/* Date Filter */}
+                    <div>
+                      <Label className="text-slate-300 text-sm mb-1 block">
+                        Date
+                      </Label>
+                      <div className="relative">
+                        <Calendar className="absolute left-2 top-2.5 h-4 w-4 text-slate-400" />
+                        <Input
+                          placeholder="MM/DD/YYYY"
+                          value={dateFilter}
+                          onChange={(e) => setDateFilter(e.target.value)}
+                          className="pl-8 bg-slate-800 text-white border-slate-600 focus:border-blue-500"
+                        />
+                        {dateFilter && (
+                          <X
+                            className="absolute right-2 top-2.5 h-4 w-4 text-slate-400 cursor-pointer hover:text-white"
+                            onClick={() => setDateFilter("")}
+                          />
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Court Filter */}
+                    <div>
+                      <Label className="text-slate-300 text-sm mb-1 block">
+                        Court
+                      </Label>
+                      <Select
+                        value={courtFilter}
+                        onValueChange={setCourtFilter}
+                      >
+                        <SelectTrigger className="bg-slate-800 text-white border-slate-600">
+                          <SelectValue placeholder="All courts" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-slate-800 border-slate-600">
+                          <SelectItem value="all">All courts</SelectItem>
+                          {[1, 2, 3, 4, 5, 6, 7].map((num) => (
+                            <SelectItem key={num} value={num.toString()}>
+                              Court {num}
+                            </SelectItem>
                           ))}
-                        </TableBody>
-                      </Table>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Status Filter */}
+                    <div>
+                      <Label className="text-slate-300 text-sm mb-1 block">
+                        Status
+                      </Label>
+                      <Select
+                        value={statusFilter}
+                        onValueChange={setStatusFilter}
+                      >
+                        <SelectTrigger className="bg-slate-800 text-white border-slate-600">
+                          <SelectValue placeholder="All statuses" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-slate-800 border-slate-600">
+                          <SelectItem value="all">All statuses</SelectItem>
+                          <SelectItem value="confirmed">Confirmed</SelectItem>
+                          <SelectItem value="cancelled">Cancelled</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  {/* Active filters */}
+                  {(nameFilter ||
+                    phoneFilter ||
+                    dateFilter ||
+                    courtFilter ||
+                    statusFilter) && (
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      {nameFilter && (
+                        <Badge
+                          variant="outline"
+                          className="bg-blue-900/30 text-blue-100 border-blue-700 py-1"
+                        >
+                          Name: {nameFilter}
+                          <X
+                            className="h-3 w-3 ml-1 cursor-pointer"
+                            onClick={() => setNameFilter("")}
+                          />
+                        </Badge>
+                      )}
+                      {phoneFilter && (
+                        <Badge
+                          variant="outline"
+                          className="bg-blue-900/30 text-blue-100 border-blue-700 py-1"
+                        >
+                          Phone: {phoneFilter}
+                          <X
+                            className="h-3 w-3 ml-1 cursor-pointer"
+                            onClick={() => setPhoneFilter("")}
+                          />
+                        </Badge>
+                      )}
+                      {dateFilter && (
+                        <Badge
+                          variant="outline"
+                          className="bg-blue-900/30 text-blue-100 border-blue-700 py-1"
+                        >
+                          Date: {dateFilter}
+                          <X
+                            className="h-3 w-3 ml-1 cursor-pointer"
+                            onClick={() => setDateFilter("")}
+                          />
+                        </Badge>
+                      )}
+                      {courtFilter && (
+                        <Badge
+                          variant="outline"
+                          className="bg-blue-900/30 text-blue-100 border-blue-700 py-1"
+                        >
+                          Court: {courtFilter}
+                          <X
+                            className="h-3 w-3 ml-1 cursor-pointer"
+                            onClick={() => setCourtFilter("all")}
+                          />
+                        </Badge>
+                      )}
+                      {statusFilter && (
+                        <Badge
+                          variant="outline"
+                          className="bg-blue-900/30 text-blue-100 border-blue-700 py-1"
+                        >
+                          Status: {statusFilter}
+                          <X
+                            className="h-3 w-3 ml-1 cursor-pointer"
+                            onClick={() => setStatusFilter("all")}
+                          />
+                        </Badge>
+                      )}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              <Card className="bg-slate-900 border-blue-900">
+                <CardHeader>
+                  <div className="flex justify-between items-center">
+                    <CardTitle className="text-lg sm:text-xl text-white">
+                      All Bookings
+                    </CardTitle>
+                    <Badge
+                      variant="outline"
+                      className="bg-blue-900/40 text-blue-100 border-blue-700 py-1.5 px-2.5"
+                    >
+                      {filteredBookings.length}{" "}
+                      {filteredBookings.length === 1 ? "booking" : "bookings"}
+                    </Badge>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {loading ? (
+                    <div className="text-center py-8 text-slate-300">
+                      Loading bookings...
+                    </div>
+                  ) : filteredBookings.length === 0 ? (
+                    <div className="text-center py-8 text-slate-300">
+                      {bookings.length === 0
+                        ? "No bookings found"
+                        : "No bookings match your filters"}
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto -mx-4 sm:mx-0">
+                      {/* Mobile view - cards layout */}
+                      <div className="md:hidden space-y-4 px-4">
+                        {filteredBookings.map((booking) => (
+                          <div
+                            key={booking._id}
+                            className="p-4 bg-slate-800 rounded-lg border border-blue-900/50"
+                          >
+                            <div className="flex justify-between items-start mb-2">
+                              <h3 className="font-medium text-white">
+                                {booking.name}
+                              </h3>
+                              <span
+                                className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                  booking.status === "confirmed"
+                                    ? "bg-green-700 text-green-100"
+                                    : "bg-red-700 text-red-100"
+                                }`}
+                              >
+                                {booking.status}
+                              </span>
+                            </div>
+                            <div className="space-y-1 text-sm text-slate-300 mb-3">
+                              <p>
+                                📱{" "}
+                                <span className="text-white">
+                                  {booking.phoneNumber}
+                                </span>
+                              </p>
+                              <p>
+                                🗓️{" "}
+                                <span className="text-white">
+                                  {formatDate(booking.date)}
+                                </span>
+                              </p>
+                              <p>
+                                🎾{" "}
+                                <span className="text-white">
+                                  Court {booking.courtNumber}
+                                </span>
+                              </p>
+                              <p>
+                                ⏰{" "}
+                                <span className="text-white">
+                                  {booking.isEclipseSlot
+                                    ? "Midnight Session"
+                                    : booking.startTime}
+                                </span>
+                              </p>
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="w-full text-red-400 hover:text-red-300 hover:bg-red-950/40 border border-red-900/40"
+                              onClick={() => confirmDeleteBooking(booking)}
+                            >
+                              <XCircle className="h-4 w-4 mr-2" />
+                              Delete
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Desktop view - table layout */}
+                      <div className="hidden md:block">
+                        <Table className="border-collapse">
+                          <TableHeader>
+                            <TableRow className="border-blue-800/40 hover:bg-slate-800">
+                              <TableHead className="text-blue-100 font-semibold">
+                                Name
+                              </TableHead>
+                              <TableHead className="text-blue-100 font-semibold">
+                                Phone
+                              </TableHead>
+                              <TableHead className="text-blue-100 font-semibold">
+                                Date
+                              </TableHead>
+                              <TableHead className="text-blue-100 font-semibold">
+                                Court
+                              </TableHead>
+                              <TableHead className="text-blue-100 font-semibold">
+                                Time
+                              </TableHead>
+                              <TableHead className="text-blue-100 font-semibold">
+                                Status
+                              </TableHead>
+                              <TableHead className="text-blue-100 font-semibold">
+                                Action
+                              </TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {filteredBookings.map((booking) => (
+                              <TableRow
+                                key={booking._id}
+                                className="border-blue-800/40 hover:bg-slate-800"
+                              >
+                                <TableCell className="text-white font-medium">
+                                  {booking.name}
+                                </TableCell>
+                                <TableCell className="text-white">
+                                  {booking.phoneNumber}
+                                </TableCell>
+                                <TableCell className="text-white">
+                                  {formatDate(booking.date)}
+                                </TableCell>
+                                <TableCell className="text-white">
+                                  Court {booking.courtNumber}
+                                </TableCell>
+                                <TableCell className="text-white">
+                                  {booking.isEclipseSlot
+                                    ? "Midnight Session"
+                                    : booking.startTime}
+                                </TableCell>
+                                <TableCell>
+                                  <span
+                                    className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                      booking.status === "confirmed"
+                                        ? "bg-green-700 text-green-100"
+                                        : "bg-red-700 text-red-100"
+                                    }`}
+                                  >
+                                    {booking.status}
+                                  </span>
+                                </TableCell>
+                                <TableCell>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="text-red-400 hover:text-red-300 hover:bg-red-950/40 border border-red-900/40"
+                                    onClick={() =>
+                                      confirmDeleteBooking(booking)
+                                    }
+                                  >
+                                    <XCircle className="h-4 w-4 mr-1" />
+                                    Delete
+                                  </Button>
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
                     </div>
                   )}
                 </CardContent>
               </Card>
             </TabsContent>
 
-            <TabsContent value="analytics">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <Card>
-                  <CardHeader className="pb-2 px-4">
-                    <CardTitle>Bookings by Court</CardTitle>
+            {/* Statistics Tab */}
+            <TabsContent value="statistics">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <Card className="bg-slate-900 border-blue-900">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-base sm:text-lg text-white">
+                      Total Bookings
+                    </CardTitle>
                   </CardHeader>
-                  <CardContent className="px-4 py-3">
-                    {Object.keys(bookingsByCourt).length === 0 ? (
-                      <div className="text-center py-6">No data available</div>
-                    ) : (
-                      <div className="space-y-4">
-                        {Object.entries(bookingsByCourt).map(
-                          ([court, count]: [string, number]) => (
-                            <div key={court}>
-                              <div className="flex justify-between mb-1">
-                                <span>{court}</span>
-                                <span className="font-medium">{count}</span>
-                              </div>
-                              <div className="w-full h-2 bg-secondary rounded-full overflow-hidden">
-                                <div
-                                  className="h-full bg-primary rounded-full"
-                                  style={{
-                                    width: `${(count / totalBookings) * 100}%`,
-                                  }}
-                                ></div>
-                              </div>
-                            </div>
-                          )
-                        )}
-                      </div>
-                    )}
+                  <CardContent>
+                    <p className="text-2xl sm:text-3xl font-bold text-blue-300">
+                      {bookings.length}
+                    </p>
                   </CardContent>
                 </Card>
 
-                <Card>
-                  <CardHeader className="pb-2 px-4">
-                    <CardTitle>Booking Status</CardTitle>
+                <Card className="bg-slate-900 border-blue-900">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-base sm:text-lg text-white">
+                      Active Bookings
+                    </CardTitle>
                   </CardHeader>
-                  <CardContent className="px-4 py-3">
-                    <div className="space-y-4">
-                      <div>
-                        <div className="flex justify-between mb-1">
-                          <span>Confirmed</span>
-                          <span className="font-medium">
-                            {confirmedBookings}
-                          </span>
-                        </div>
-                        <div className="w-full h-2 bg-secondary rounded-full overflow-hidden">
-                          <div
-                            className="h-full bg-green-500 rounded-full"
-                            style={{
-                              width: `${
-                                (confirmedBookings / totalBookings) * 100
-                              }%`,
-                            }}
-                          ></div>
-                        </div>
-                      </div>
-                      <div>
-                        <div className="flex justify-between mb-1">
-                          <span>Cancelled</span>
-                          <span className="font-medium">
-                            {cancelledBookings}
-                          </span>
-                        </div>
-                        <div className="w-full h-2 bg-secondary rounded-full overflow-hidden">
-                          <div
-                            className="h-full bg-red-500 rounded-full"
-                            style={{
-                              width: `${
-                                (cancelledBookings / totalBookings) * 100
-                              }%`,
-                            }}
-                          ></div>
-                        </div>
-                      </div>
-                    </div>
+                  <CardContent>
+                    <p className="text-2xl sm:text-3xl font-bold text-green-400">
+                      {bookings.filter((b) => b.status === "confirmed").length}
+                    </p>
+                  </CardContent>
+                </Card>
+
+                <Card className="bg-slate-900 border-blue-900">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-base sm:text-lg text-white">
+                      Cancelled Bookings
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-2xl sm:text-3xl font-bold text-red-400">
+                      {bookings.filter((b) => b.status === "cancelled").length}
+                    </p>
                   </CardContent>
                 </Card>
               </div>
             </TabsContent>
           </Tabs>
-        </div>
+
+          {/* Delete Booking Confirmation Dialog */}
+          <AlertDialog
+            open={showDeleteDialog}
+            onOpenChange={setShowDeleteDialog}
+          >
+            <AlertDialogContent className="bg-slate-900 border border-blue-800">
+              <AlertDialogHeader>
+                <AlertDialogTitle className="text-white">
+                  Confirm Deletion
+                </AlertDialogTitle>
+                <AlertDialogDescription className="text-slate-300">
+                  Are you sure you want to delete this booking?
+                  <br />
+                  {bookingToDelete && (
+                    <span className="text-blue-300 font-medium block mt-2">
+                      {bookingToDelete.name}'s booking for Court{" "}
+                      {bookingToDelete.courtNumber} on{" "}
+                      {formatDate(bookingToDelete.date)}
+                    </span>
+                  )}
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel className="border-blue-800 text-black-100 hover:bg-blue-950">
+                  Cancel
+                </AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={handleDeleteBooking}
+                  disabled={isDeleting}
+                  className="bg-red-600 hover:bg-red-700 text-white"
+                >
+                  {isDeleting ? "Deleting..." : "Delete"}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </>
       )}
-    </>
+    </div>
   );
 };
 

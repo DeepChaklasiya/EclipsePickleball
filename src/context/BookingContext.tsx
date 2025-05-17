@@ -15,6 +15,7 @@ export interface TimeSlot {
   startTime: string;
   endTime: string;
   section?: string;
+  isSpecialEclipseSlot?: boolean;
 }
 
 // Court type
@@ -34,6 +35,9 @@ export interface BookingDetails {
   phoneNumber: string;
   players: number;
   notes?: string;
+  couponCode?: string;
+  discount?: number;
+  totalAmount?: number;
 }
 
 // Booking type
@@ -64,24 +68,12 @@ interface BookingContextType {
 const sampleLocations: Location[] = [
   {
     id: "1",
-    name: "Eclipse",
+    name: "Eclipse Pickleball",
     address:
       "Opp. Celestial dreams, Canal Pathway, VIP canal road, Vesu, Surat",
     image:
-      "https://res.cloudinary.com/djbfmsyki/image/upload/v1746794916/Capture_jmrn1e.jpg",
+      "https://res.cloudinary.com/djbfmsyki/image/upload/v1747165252/WhatsApp_Image_2025-05-13_at_22.49.02_58ca8961_x8xn4z.jpg",
   },
-  // {
-  //   id: '2',
-  //   name: 'Eclipse Andromeda',
-  //   address: 'Coming soon.....',
-  //   image: 'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80'
-  // }
-  // {
-  //   id: '3',
-  //   name: 'Eclipse Westside',
-  //   address: '789 Pine St, Westside',
-  //   image: 'https://images.unsplash.com/photo-1580237072617-771c3ecc4a24?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80'
-  // }
 ];
 
 const sampleTimeSlots: TimeSlot[] = [

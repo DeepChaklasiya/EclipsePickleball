@@ -28,12 +28,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ArrowLeft, MapPin, Calendar, Clock } from "lucide-react";
+import { ArrowLeft, MapPin, Calendar, Clock, Check } from "lucide-react";
 import { getUser } from "@/lib/auth";
 import { createBooking } from "@/lib/api";
 import { toast } from "sonner";
 import { formatTimeRangeIST } from "@/lib/utils";
 import { cn } from "@/lib/utils";
+import Confetti from 'react-confetti';
 
 const formSchema = z.object({
   name: z.string().min(2, { message: "Name must be at least 2 characters" }),
@@ -52,6 +53,27 @@ const BookingDetailsPage = () => {
   const [userName, setUserName] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [buttonHighlighted, setButtonHighlighted] = useState(false);
+  const [appliedCoupon, setAppliedCoupon] = useState("");
+  const [discountAmount, setDiscountAmount] = useState(0);
+  const [showCouponAnimation, setShowCouponAnimation] = useState(false);
+  const [showConfetti, setShowConfetti] = useState(false);
+  const [windowSize, setWindowSize] = useState({
+    width: window.innerWidth,
+    height: window.innerHeight
+  });
+
+  // Update window size on resize
+  useEffect(() => {
+    const handleResize = () => {
+      setWindowSize({
+        width: window.innerWidth,
+        height: window.innerHeight
+      });
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // Get user from local storage
   useEffect(() => {
@@ -92,9 +114,12 @@ const BookingDetailsPage = () => {
           phoneNumber: form.getValues().phoneNumber,
           players: form.getValues().players || 4,
           notes: form.getValues().notes,
+          couponCode: appliedCoupon,
+          discount: discountAmount,
+          totalAmount: getFinalPrice(),
         });
 
-        toast.success("Booking successful!");
+        // toast.success("Booking successful!");
         navigate("/booking-confirmation");
       } catch (error) {
         console.error("Booking error:", error);
@@ -121,6 +146,9 @@ const BookingDetailsPage = () => {
       phoneNumber: formData.phoneNumber || "",
       notes: formData.notes || "",
       players: 4,
+      couponCode: appliedCoupon,
+      discount: discountAmount,
+      totalAmount: getFinalPrice(),
     };
 
     // Briefly flash button animation
@@ -137,6 +165,78 @@ const BookingDetailsPage = () => {
     return `OUTDOOR | ${booking.court.id}`;
   };
 
+  // Calculate base price based on time slot
+  const getBasePrice = () => {
+    return booking.timeSlot?.section === "evening" ? 900 : 600;
+  };
+
+  // Calculate final price after discount
+  const getFinalPrice = () => {
+    const basePrice = getBasePrice();
+    return basePrice - discountAmount;
+  };
+
+  // Handle coupon code application
+  const handleApplyCoupon = () => {
+    const normalizedCode = couponCode.trim().toUpperCase();
+    
+    if (normalizedCode === "WELCOME100") {
+      if (appliedCoupon === normalizedCode) {
+        toast.info("Coupon already applied!");
+        return;
+      }
+      
+      setAppliedCoupon(normalizedCode);
+      setDiscountAmount(100);
+      setShowCouponAnimation(true);
+      
+      // Show confetti animation
+      setShowConfetti(true);
+      setTimeout(() => {
+        setShowConfetti(false);
+      }, 5000);
+      
+      // Show success toast
+      // toast.success("Coupon WELCOME100 applied successfully!");
+      
+      // Reset animation after a delay
+      setTimeout(() => {
+        setShowCouponAnimation(false);
+      }, 2000);
+    } else if (couponCode.trim() === "") {
+      toast.error("Please enter a coupon code");
+    } else {
+      toast.error("Invalid coupon code");
+    }
+  };
+
+  // Check for valid coupon code as user types
+  const handleCouponChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setCouponCode(value);
+    
+    // Auto-apply if user enters the correct code
+    if (value.trim().toUpperCase() === "WELCOME100" && appliedCoupon === "") {
+      // Show confetti immediately
+      setShowConfetti(true);
+      setTimeout(() => {
+        setShowConfetti(false);
+      }, 5000);
+      
+      // Apply coupon after a short delay for better UX
+      setTimeout(() => {
+        setAppliedCoupon("WELCOME100");
+        setDiscountAmount(100);
+        setShowCouponAnimation(true);
+        
+        // Reset animation after a delay
+        setTimeout(() => {
+          setShowCouponAnimation(false);
+        }, 2000);
+      }, 300);
+    }
+  };
+
   // Add effect to show button animation on first load
   useEffect(() => {
     if (booking.court) {
@@ -147,6 +247,17 @@ const BookingDetailsPage = () => {
 
   return (
     <div className="page-container bg-[#f2e8dc]">
+      {/* Confetti overlay */}
+      {showConfetti && (
+        <Confetti
+          width={windowSize.width}
+          height={windowSize.height}
+          recycle={false}
+          numberOfPieces={200}
+          colors={['#c084fc', '#818cf8', '#60a5fa', '#34d399', '#fcd34d']}
+        />
+      )}
+      
       <div className="content-with-sticky-button">
         {/* <div className="flex justify-between items-center mb-4">
           <div className="text-2xl font-bold">ANY COURT YOU PREFER?</div>
@@ -255,22 +366,71 @@ const BookingDetailsPage = () => {
             </div>
           </div>
 
-          <div className="flex items-center mb-6">
-            <input
-              type="text"
-              placeholder="Your coupon code"
-              className="flex-grow border rounded-l-lg px-3 py-2 focus:outline-none"
-              value={couponCode}
-              onChange={(e) => setCouponCode(e.target.value)}
-            />
-            <button className="bg-[#3a3a3a] text-white px-4 py-2 rounded-r-lg">
-              APPLY
-            </button>
+          {/* Coupon Code Section */}
+          <div className="mb-6">
+            <div className="flex items-center">
+              <input
+                type="text"
+                placeholder="Your coupon code"
+                className={`flex-grow border rounded-l-lg px-3 py-2 focus:outline-none ${
+                  appliedCoupon ? "border-green-400 bg-green-50" : ""
+                }`}
+                value={couponCode}
+                onChange={handleCouponChange}
+                disabled={!!appliedCoupon}
+              />
+              <button 
+                className={`px-4 py-2 rounded-r-lg ${
+                  appliedCoupon 
+                    ? "bg-green-500 text-white" 
+                    : "bg-[#3a3a3a] text-white"
+                }`}
+                onClick={handleApplyCoupon}
+                disabled={!!appliedCoupon}
+              >
+                {appliedCoupon ? (
+                  <span className="flex items-center">
+                    <Check className="w-4 h-4 mr-1" /> APPLIED
+                  </span>
+                ) : (
+                  "APPLY"
+                )}
+              </button>
+            </div>
+            
+            {/* Applied Coupon Message */}
+            {appliedCoupon && (
+              <div className={`mt-2 text-sm text-green-600 flex items-center ${
+                showCouponAnimation ? "animate-bounce" : ""
+              }`}>
+                <Check className="w-4 h-4 mr-1" />
+                Coupon "{appliedCoupon}" applied! You saved ₹{discountAmount}
+              </div>
+            )}
           </div>
 
-          <div className="flex justify-between text-lg font-bold mb-4">
-            <span>Total amount</span>
-            <span>₹800</span>
+          {/* Price Breakdown */}
+          <div className="border-t border-gray-200 pt-4 mb-4">
+            <div className="flex justify-between text-gray-600 mb-2">
+              <span>Base amount</span>
+              <span>₹{getBasePrice()}</span>
+            </div>
+            
+            {discountAmount > 0 && (
+              <div className={`flex justify-between text-green-600 mb-2 ${
+                showCouponAnimation ? "animate-pulse" : ""
+              }`}>
+                <span>Discount</span>
+                <span>- ₹{discountAmount}</span>
+              </div>
+            )}
+            
+            <div className="flex justify-between text-lg font-bold">
+              <span>Total amount</span>
+              <span className={`${showCouponAnimation ? "animate-pulse" : ""}`}>
+                ₹{getFinalPrice()}
+              </span>
+            </div>
           </div>
 
           {/* Hidden form fields */}

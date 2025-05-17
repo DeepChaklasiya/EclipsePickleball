@@ -151,7 +151,7 @@ const Navbar = ({ variant = "default" }: NavbarProps) => {
               </div>
 
               <span className="font-semibold text-lg text-white eclipse-text">
-                Eclipse
+                Eclipse Pickleball
               </span>
             </Link>
           </div>

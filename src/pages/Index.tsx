@@ -18,6 +18,7 @@ const Index = () => {
   >([]);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [animateButton, setAnimateButton] = useState(false);
+  const [animateCoupon, setAnimateCoupon] = useState(false);
   const navigate = useNavigate();
 
   // Generate stars with random positions for the cosmic background
@@ -41,6 +42,26 @@ const Index = () => {
     }, 1000);
 
     return () => clearTimeout(timer);
+  }, []);
+
+  // Add coupon animation for first-time visitors
+  useEffect(() => {
+    // Check if this is the first visit
+    const hasVisitedBefore = localStorage.getItem('hasVisitedBefore');
+    
+    if (!hasVisitedBefore) {
+      // Set timeout to animate coupon box after page loads
+      const couponTimer = setTimeout(() => {
+        setAnimateCoupon(true);
+        
+        // After animation completes, mark as visited
+        setTimeout(() => {
+          localStorage.setItem('hasVisitedBefore', 'true');
+        }, 2000);
+      }, 1500);
+      
+      return () => clearTimeout(couponTimer);
+    }
   }, []);
 
   const handleBookCourtClick = () => {
@@ -86,6 +107,38 @@ const Index = () => {
       <div className="absolute top-0 left-0 h-full w-1 bg-gradient-to-b from-transparent via-purple-500/30 to-transparent z-0"></div>
       <div className="absolute top-0 right-0 h-full w-1 bg-gradient-to-b from-transparent via-green-500/30 to-transparent z-0"></div>
 
+      {/* Coupon Banner - Moved to top position */}
+      <div className="w-full max-w-md mx-auto mt-20 mb-4 relative z-20">
+        <div 
+          className={`bg-gradient-to-r from-indigo-600/40 to-purple-600/40 backdrop-blur-md rounded-lg p-4 border border-indigo-400/30 shadow-[0_0_20px_rgba(99,102,241,0.5)] relative overflow-hidden transition-all duration-700 ease-in-out ${
+            animateCoupon ? 'animate-bounce scale-105' : 'animate-pulse-slow'
+          }`}
+        >
+          {/* Starburst effect */}
+          <div className="absolute inset-0 bg-gradient-to-r from-violet-500/10 to-fuchsia-500/10 rounded-full scale-150 blur-xl"></div>
+          
+          {/* Sparkle effects */}
+          <div className="absolute -top-1 -left-1 w-3 h-3 bg-white rounded-full opacity-70 animate-pulse"></div>
+          <div className="absolute top-1/2 -right-1 w-2 h-2 bg-white rounded-full opacity-60 animate-pulse" style={{ animationDelay: "0.5s" }}></div>
+          <div className="absolute -bottom-1 left-1/3 w-2 h-2 bg-white rounded-full opacity-50 animate-pulse" style={{ animationDelay: "1s" }}></div>
+          
+          {/* Diagonal light streak */}
+          <div className="absolute top-0 left-0 w-full h-full overflow-hidden">
+            <div className="absolute -top-1 -left-1 w-[120%] h-[5px] bg-gradient-to-r from-transparent via-white/40 to-transparent transform rotate-45 translate-y-[400%] animate-pulse" style={{ animationDuration: "3s" }}></div>
+          </div>
+          
+          <div className="text-center relative z-10">
+            <p className="text-white text-sm font-medium tracking-wide">
+              Use coupon code:
+            </p>
+            <div className="my-1 py-1 px-2 bg-gradient-to-r from-indigo-500/20 to-fuchsia-500/20 rounded-md border border-white/20 inline-block shadow-[0_0_10px_rgba(99,102,241,0.4)]">
+              <span className="font-bold text-transparent bg-gradient-to-r from-indigo-300 to-fuchsia-300 bg-clip-text tracking-wider text-base">WELCOME100</span>
+            </div>
+            <p className="text-white/90 text-xs mt-1 tracking-wide">to get <span className="font-semibold text-indigo-200">₹100 off</span> your first booking!</p>
+          </div>
+        </div>
+      </div>
+
       {/* Hero Section */}
       <div className="flex-1 flex flex-col justify-center items-center text-center p-4 relative z-10 content-with-sticky-button">
         <div className="w-full max-w-md animate-fade-in backdrop-blur-sm bg-black/20 rounded-lg p-8 border border-white/10 shadow-[0_0_25px_rgba(0,200,255,0.2)]">
@@ -124,9 +177,9 @@ const Index = () => {
             onClick={handleBookCourtClick}
             variant="cosmic"
             size="cosmic"
-            className={`w-full font-semibold relative group ${animateButton ? 'animate-attention-pulse' : ''}`}
+            className="w-full font-semibold relative group"
           >
-            <span className={`flex items-center justify-center ${animateButton ? 'animate-glow-text' : ''}`}>
+            <span className="flex items-center justify-center">
               BOOK A COURT 
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 ml-2 transition-transform group-hover:translate-x-1" viewBox="0 0 20 20" fill="currentColor">
                 <path fillRule="evenodd" d="M10.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L12.586 11H5a1 1 0 110-2h7.586l-2.293-2.293a1 1 0 010-1.414z" clipRule="evenodd" />

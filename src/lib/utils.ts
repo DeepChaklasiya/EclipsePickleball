@@ -13,6 +13,15 @@ export function cn(...inputs: ClassValue[]) {
 export function formatTimeToIST(timeString: string): string {
   if (!timeString) return "";
 
+  // Handle special case for Eclipse slot
+  if (
+    timeString === "Midnight" ||
+    timeString === "Eclipse" ||
+    timeString === "Full Evening Access"
+  ) {
+    return timeString;
+  }
+
   // If already has AM/PM, return as is
   if (timeString.includes("AM") || timeString.includes("PM")) {
     return timeString;
@@ -40,6 +49,11 @@ export function formatTimeRangeIST(
   endTime?: string
 ): string {
   if (!startTime) return "Time not specified";
+
+  // Special handling for Eclipse/Midnight slot
+  if (startTime === "Midnight" || startTime === "Eclipse") {
+    return "Midnight (Exclusive Slot)";
+  }
 
   const formattedStartTime = formatTimeToIST(startTime);
 

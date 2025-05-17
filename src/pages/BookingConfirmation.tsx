@@ -1,7 +1,14 @@
 import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
-import { Check, Map, ArrowRight, Download } from "lucide-react";
+import {
+  Check,
+  Map,
+  ArrowRight,
+  Download,
+  Loader2,
+  AlertCircle,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Header from "@/components/Header";
 import { useBooking } from "@/context/BookingContext";
@@ -17,6 +24,8 @@ const BookingConfirmation = () => {
   const [bookingCode, setBookingCode] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const bookingCardRef = useRef<HTMLDivElement>(null);
 
   // Generate random booking code
@@ -54,34 +63,33 @@ const BookingConfirmation = () => {
 
     // Save booking to backend if not already saved
     const saveBookingToBackend = async () => {
-      if (isSaved) return;
+      if (isSaved) {
+        setIsLoading(false);
+        return;
+      }
 
       try {
         setIsSaving(true);
+        setIsLoading(true);
+        setError(null);
         const user = getUser();
 
         if (!user) {
           console.error("User not found");
+          setError("User information not found. Please try logging in again.");
+          setIsLoading(false);
           return;
         }
 
-        // Format the time slot ID correctly - backend expects a string like "08:00-09:00"
-        let startTime = "08:00";
-        let endTime = "09:00";
+        // Determine if this is the Eclipse slot
+        const isEclipseSlot = booking.timeSlot?.isSpecialEclipseSlot || false;
 
-        // Check if we have a time slot with start and end times
-        if (booking.timeSlot?.startTime) {
-          startTime = formatTimeRangeIST(booking.timeSlot.startTime).split(
-            " - "
-          )[0];
-          endTime = formatTimeRangeIST(booking.timeSlot.startTime).split(
-            " - "
-          )[1];
-        } else if (booking.timeSlot?.id && booking.timeSlot.id.includes("-")) {
-          // Extract from time range format
-          const [start, end] = booking.timeSlot.id.split("-");
-          startTime = start.trim();
-          endTime = end.trim();
+        // Format the time slot string
+        let timeSlotString;
+        if (isEclipseSlot) {
+          timeSlotString = "Midnight";
+        } else {
+          timeSlotString = `${booking.timeSlot.startTime} - ${booking.timeSlot.endTime} IST`;
         }
 
         // Ensure the data format matches what the backend expects
@@ -90,10 +98,11 @@ const BookingConfirmation = () => {
           name: user.name,
           courtNumber: booking.court.id,
           date: booking.date!.toISOString(),
-          startTime,
-          endTime,
+          timeSlotString,
           numberOfPlayers: booking.details!.players || 4,
           notes: booking.details!.notes || "",
+          totalAmount: booking.details!.totalAmount || 0,
+          isEclipseSlot,
         };
 
         console.log("Sending booking data:", bookingData);
@@ -104,20 +113,26 @@ const BookingConfirmation = () => {
           bookingData.name,
           bookingData.courtNumber,
           bookingData.date,
-          `${startTime}-${endTime}`,
+          bookingData.timeSlotString,
           bookingData.numberOfPlayers,
-          bookingData.notes
+          bookingData.notes,
+          bookingData.totalAmount,
+          bookingData.isEclipseSlot
         );
 
         setIsSaved(true);
         console.log("Booking saved to backend:", savedBooking);
       } catch (error) {
         console.error("Error saving booking:", error);
-        toast.error(
-          "Failed to save booking to server. Your booking is still valid."
+        setError(
+          error instanceof Error
+            ? error.message
+            : "Failed to save booking to server. Please try again."
         );
+        toast.error("Failed to save booking to server. Please try again.");
       } finally {
         setIsSaving(false);
+        setIsLoading(false);
       }
     };
 
@@ -200,6 +215,51 @@ const BookingConfirmation = () => {
     }
   };
 
+  const handleTryAgain = () => {
+    resetBooking();
+    navigate("/");
+  };
+
+  // Show loading state
+  if (isLoading) {
+    return (
+      <div className="page-container bg-[#f2e8dc] flex flex-col items-center justify-center">
+        <div className="bg-white rounded-lg p-8 shadow-md text-center max-w-md">
+          <Loader2 className="h-12 w-12 animate-spin text-pink-500 mx-auto mb-4" />
+          <h2 className="text-xl font-bold mb-2">Processing Your Booking</h2>
+          <p className="text-gray-600 mb-4">
+            Please wait while we confirm your reservation with our server...
+          </p>
+          <div className="w-full bg-gray-200 rounded-full h-2 mb-4">
+            <div
+              className="bg-gradient-to-r from-pink-400 to-amber-300 h-2 rounded-full animate-pulse"
+              style={{ width: "80%" }}
+            ></div>
+          </div>
+          <p className="text-xs text-gray-500">This may take a few moments</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error state
+  if (error) {
+    return (
+      <div className="page-container bg-[#f2e8dc] flex flex-col items-center justify-center">
+        <div className="bg-white rounded-lg p-8 shadow-md text-center max-w-md">
+          <div className="bg-red-100 p-3 rounded-full inline-flex items-center justify-center mx-auto mb-4">
+            <AlertCircle className="h-8 w-8 text-red-500" />
+          </div>
+          <h2 className="text-xl font-bold mb-2">Booking Error</h2>
+          <p className="text-gray-600 mb-6">{error}</p>
+          <Button onClick={handleTryAgain} variant="cosmic" className="w-full">
+            Try Again
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   if (
     !booking.id ||
     !booking.location ||
@@ -216,7 +276,8 @@ const BookingConfirmation = () => {
       <div className="content-with-sticky-button pb-12 px-4 md:px-6">
         <div className="p-4 md:p-6 rounded-3xl bg-[#fffbe1] mb-8 max-w-lg mx-auto">
           {isSaving && (
-            <div className="text-center mb-4 text-sm bg-blue-100 text-blue-800 p-2 rounded">
+            <div className="text-center mb-4 text-sm bg-blue-100 text-blue-800 p-2 rounded flex items-center justify-center">
+              <Loader2 className="h-4 w-4 animate-spin mr-2" />
               Saving your booking to the server...
             </div>
           )}
@@ -262,6 +323,15 @@ const BookingConfirmation = () => {
                 </span>
                 <span>{formatTimeToIST(booking.timeSlot.endTime)}</span>
                 <span className="ml-2">IST</span>
+              </div>
+            </div>
+
+            {/* Total Amount */}
+            <div className="mb-4 text-center">
+              <div className="bg-black/10 rounded-lg p-2 inline-block">
+                <p className="text-sm font-semibold">
+                  Total Amount: ₹{booking.details.totalAmount || 0}
+                </p>
               </div>
             </div>
 
